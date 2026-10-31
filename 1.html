@@ -1094,12 +1094,304 @@
             };
         }
 
+        // Pełna początkowa lista pojazdów wraz z Twoimi autami (F10, Peugeot taty, Łukasza, BMW Patrycji, Astra, Fabia, Corsa, Mercedes, Peugeot Klaudii, Bobcat, Caddy)
+        function getInitialCarsSeed() {
+            return [
+                getF10TemplateData(),
+                {
+                    id: 'car-peugeot-taty',
+                    name: 'Peugeot taty',
+                    vin: 'VF33H9HXC83993042',
+                    owner: 'Tata',
+                    mileage: 215000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: '1109 AY',
+                        airFilter: '1444 CP',
+                        cabinFilter: '6447 KL',
+                        fuelFilter: '1901 95',
+                        extra: ''
+                    },
+                    todos: [],
+                    records: [
+                        {
+                            id: 'rec-peugeot-taty-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: '12.2025',
+                            mileage: 215000,
+                            rawMileageLabel: '215kkm',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
+                            partsUsed: 'Filtry: 1109 AY, 1444 CP, 6447 KL, 1901 95',
+                            description: 'Wymiana oleju i komplet filtrów.'
+                        }
+                    ],
+                    updatedAt: Date.now() - 1000
+                },
+                {
+                    id: 'car-peugeot-lukasza',
+                    name: 'Peugeot Łukasza',
+                    vin: 'VF33H9HZC84924340',
+                    owner: 'Łukasz',
+                    mileage: 200000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: '1109 AY',
+                        airFilter: '1444 CP',
+                        cabinFilter: '6447 KL',
+                        fuelFilter: '1901 95',
+                        extra: ''
+                    },
+                    todos: [],
+                    records: [],
+                    updatedAt: Date.now() - 2000
+                },
+                {
+                    id: 'car-bmw-patrycja',
+                    name: 'BMW Patrycja',
+                    vin: 'WBA8J91050K726375',
+                    owner: 'Patrycja',
+                    mileage: 305000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: '8 575 211',
+                        airFilter: '8 511 668',
+                        cabinFilter: '9 237 555',
+                        fuelFilter: '8 572 522',
+                        extra: ''
+                    },
+                    todos: [],
+                    records: [
+                        {
+                            id: 'rec-bmw-patrycja-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: '04.2026',
+                            mileage: 305000,
+                            rawMileageLabel: '305kkm',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
+                            partsUsed: 'Filtry OEM/porównawcze: 8 575 211, 8 511 668, 9 237 555, 8 572 522',
+                            description: 'Serwis olejowy.'
+                        }
+                    ],
+                    updatedAt: Date.now() - 3000
+                },
+                {
+                    id: 'car-astra',
+                    name: 'Astra',
+                    vin: 'W0L0AHL0895063234',
+                    owner: '',
+                    mileage: 241000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: '55594651',
+                        airFilter: '93192885',
+                        cabinFilter: '95528292',
+                        fuelFilter: '',
+                        extra: 'Do następnej wymiany potrzeba 2l oleju, korek spustowy oleju i uszczelnienie'
+                    },
+                    todos: [
+                        { id: 't-astra-1', text: 'Kupić 2l oleju, korek spustowy i uszczelnienie do następnej wymiany', priority: 'BUY', done: false, createdAt: '05.2026' }
+                    ],
+                    records: [
+                        {
+                            id: 'rec-astra-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: '05.2026',
+                            mileage: 241000,
+                            rawMileageLabel: '241kkm',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: false },
+                            partsUsed: 'Filtry: 55594651, 93192885, 95528292',
+                            description: 'Wymiana oleju i filtrów.'
+                        }
+                    ],
+                    updatedAt: Date.now() - 4000
+                },
+                {
+                    id: 'car-fabia',
+                    name: 'Fabia',
+                    vin: 'TMBAC25J6A3031844',
+                    owner: '',
+                    mileage: 180000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: '030 115 561 AN',
+                        airFilter: '036 129 620 H',
+                        cabinFilter: '6Q0 819 653 B',
+                        fuelFilter: '6Q0 201 051 C',
+                        extra: ''
+                    },
+                    todos: [],
+                    records: [
+                        {
+                            id: 'rec-fabia-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: '11.2025',
+                            mileage: 180000,
+                            rawMileageLabel: '180kkm',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
+                            partsUsed: 'Filtry: 030 115 561 AN, 036 129 620 H, 6Q0 819 653 B, 6Q0 201 051 C',
+                            description: 'Serwis olejowy.'
+                        }
+                    ],
+                    updatedAt: Date.now() - 5000
+                },
+                {
+                    id: 'car-corsa',
+                    name: 'Corsa',
+                    vin: 'VXKUPHNKKL4338721',
+                    owner: '',
+                    mileage: 52000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: '1109AL',
+                        airFilter: '9805552080',
+                        cabinFilter: '9833351080',
+                        fuelFilter: '',
+                        extra: 'Do następnej wymiany: uszczelnienie korka, 1l oleju'
+                    },
+                    todos: [
+                        { id: 't-corsa-1', text: 'Kupić 1l oleju i uszczelnienie korka do następnego serwisu', priority: 'BUY', done: false, createdAt: '05.2026' }
+                    ],
+                    records: [
+                        {
+                            id: 'rec-corsa-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: '05.2026',
+                            mileage: 52000,
+                            rawMileageLabel: '52kkm',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: false },
+                            partsUsed: 'Filtry: 1109AL, 9805552080, 9833351080',
+                            description: 'Wymiana oleju przy przebiegu 52kkm.'
+                        }
+                    ],
+                    updatedAt: Date.now() - 6000
+                },
+                {
+                    id: 'car-mercedes',
+                    name: 'Mercedes',
+                    vin: 'W1K1770871N287940',
+                    owner: '',
+                    mileage: 40000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: 'A 281 180 02 10',
+                        airFilter: 'A 282 094 00 04',
+                        cabinFilter: 'A 247 830 72 03',
+                        fuelFilter: '',
+                        extra: ''
+                    },
+                    todos: [],
+                    records: [
+                        {
+                            id: 'rec-mercedes-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: '11.2025',
+                            mileage: 40000,
+                            rawMileageLabel: '40kkm',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: false },
+                            partsUsed: 'Filtry OEM: A 281 180 02 10, A 282 094 00 04, A 247 830 72 03',
+                            description: 'Serwis olejowy przy 40kkm.'
+                        }
+                    ],
+                    updatedAt: Date.now() - 7000
+                },
+                {
+                    id: 'car-peugeot-klaudii',
+                    name: 'Peugeot Klaudii',
+                    vin: 'VF36ERHRJ21406676',
+                    owner: 'Klaudia',
+                    mileage: 150000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: '98 189 149 80',
+                        airFilter: '1444 EH',
+                        cabinFilter: '6447 RG',
+                        fuelFilter: '1906 89',
+                        extra: ''
+                    },
+                    todos: [],
+                    records: [],
+                    updatedAt: Date.now() - 8000
+                },
+                {
+                    id: 'car-bobcat',
+                    name: 'Bobcat 320',
+                    vin: '511720004',
+                    owner: 'Maszyna',
+                    mileage: 5000,
+                    oilIntervalKm: 500,
+                    plate: 'S/N: 511720004',
+                    parts: {
+                        oilFilter: '6671057',
+                        airFilter: '897064',
+                        cabinFilter: '',
+                        fuelFilter: '6667352',
+                        extra: 'Hydraulika: 6653336'
+                    },
+                    todos: [],
+                    records: [],
+                    updatedAt: Date.now() - 9000
+                },
+                {
+                    id: 'car-caddy',
+                    name: 'Caddy Piotrka',
+                    vin: 'WV2ZZZ2KZEX009052',
+                    owner: 'Piotrek',
+                    mileage: 250000,
+                    oilIntervalKm: 15000,
+                    plate: '',
+                    parts: {
+                        oilFilter: '03L 115 562',
+                        airFilter: '1K0 129 620 D',
+                        cabinFilter: '1K1 819 669',
+                        fuelFilter: '3C0 127 434',
+                        extra: ''
+                    },
+                    todos: [],
+                    records: [
+                        {
+                            id: 'rec-caddy-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: '09.2023',
+                            mileage: 250000,
+                            rawMileageLabel: '250kkm',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
+                            partsUsed: 'Filtry: 03L 115 562, 3C0 127 434, 1K0 129 620 D, 1K1 819 669',
+                            description: 'Serwis olejowy przy 250kkm.'
+                        }
+                    ],
+                    updatedAt: Date.now() - 10000
+                }
+            ];
+        }
+
         // Inicjalizacja Firebase i uwierzytelniania (zgodnie z wymogami RULE 1, 2, 3)
         async function initFirebase() {
             try {
                 if (typeof __firebase_config === 'undefined' || !__firebase_config) {
                     setSyncIndicator('offline', 'Tryb lokalny');
-                    cars = [getF10TemplateData()];
+                    cars = getInitialCarsSeed();
                     selectedCarId = null; // Karta pojazdu wyświetli się dopiero po kliknięciu
                     renderAll();
                     return;
@@ -1129,7 +1421,7 @@
             } catch (err) {
                 console.error('Błąd inicjalizacji Firebase:', err);
                 setSyncIndicator('offline', 'Błąd chmury');
-                cars = [getF10TemplateData()];
+                cars = getInitialCarsSeed();
                 selectedCarId = null;
                 renderAll();
             }
@@ -1163,7 +1455,10 @@
                 // Jeśli baza jest całkowicie pusta przy pierwszym uruchomieniu, automatycznie dodajemy auto F10 ze zdjęcia
                 if (loadedCars.length === 0 && !initialSeedDone) {
                     initialSeedDone = true;
-                    await window.importF10FromScreenshot(true);
+                    const initialList = getInitialCarsSeed();
+                    for (const carItem of initialList) {
+                        await persistCarToFirestore(carItem);
+                    }
                     return;
                 }
 

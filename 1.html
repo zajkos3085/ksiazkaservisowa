@@ -504,16 +504,149 @@
 
                 <!-- SEKCJA HISTORII SERWISOWEJ I NAPRAW -->
                 <div class="bg-garage-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl print-card">
-                    <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
-                        <button type="button" onclick="closeCarModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
-                            Anuluj
-                        </button>
-                        <button type="submit" id="save-car-btn" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 transition flex items-center gap-2">
-                            <i class="fa-solid fa-floppy-disk"></i> Zapisz pojazd
-                        </button>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                        <div>
+                            <h3 class="text-base font-bold text-white print-text-dark flex items-center gap-2">
+                                <i class="fa-solid fa-book-medical text-emerald-400 no-print"></i>
+                                <span>Historia Serwisowa i Naprawy</span>
+                            </h3>
+                            <p class="text-xs text-slate-400 print-text-muted">Pełny rejestr wymian oleju, przeglądów i napraw mechanicznych</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 no-print">
+                            <!-- Wyszukiwarka wpisów w historii -->
+                            <div class="relative flex-1 sm:flex-initial">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text" id="search-record-input" oninput="renderRecords()" placeholder="Szukaj w historii..." class="w-full sm:w-44 bg-slate-950 border border-slate-700 focus:border-blue-500 text-slate-200 text-xs rounded-xl pl-8 pr-7 py-2 focus:outline-none transition">
+                                <button id="clear-record-search" onclick="clearRecordSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+
+                            <!-- Filtr kategorii wpisów -->
+                            <select id="filter-record-type" onchange="renderRecords()" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500">
+                                <option value="ALL">Wszystkie wpisy</option>
+                                <option value="OIL">Serwis olejowy / filtry</option>
+                                <option value="REPAIR">Naprawy mechaniczne</option>
+                                <option value="INSPECTION">Przeglądy / Inne</option>
+                            </select>
+
+                            <!-- Przycisk dodawania nowej naprawy / wymiany oleju -->
+                            <button onclick="openRecordModal()" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Dodaj wpis / naprawę</span>
+                            </button>
+                        </div>
                     </div>
-                </form>
+
+                    <!-- Podsumowanie kosztów i liczby wpisów -->
+                    <div class="grid grid-cols-3 gap-3 my-4 no-print">
+                        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+                            <div class="text-[11px] text-slate-400">Wszystkich wpisów</div>
+                            <div id="stat-records-count" class="text-base sm:text-lg font-bold font-mono text-white">2</div>
+                        </div>
+                        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+                            <div class="text-[11px] text-slate-400">Ostatnia wymiana oleju</div>
+                            <div id="stat-last-oil" class="text-xs sm:text-sm font-bold font-mono text-amber-400 truncate">06.2026 (340kkm)</div>
+                        </div>
+                        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+                            <div class="text-[11px] text-slate-400">Suma wpisanych kosztów</div>
+                            <div id="stat-total-cost" class="text-base sm:text-lg font-bold font-mono text-emerald-400">0 PLN</div>
+                        </div>
+                    </div>
+
+                    <!-- Oś czasu / Lista wpisów serwisowych -->
+                    <div id="records-list" class="space-y-3 mt-4">
+                        <!-- Wpisy generowane przez JS -->
+                    </div>
+                </div>
+
             </div>
+        </section>
+    </main>
+
+    <!-- MODAL: DODAWANIE / EDYCJA POJAZDU ORAZ NUMERÓW PORÓWNAWCZYCH FILTRÓW -->
+    <div id="car-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl my-8">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 id="car-modal-title" class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-car text-blue-400"></i> Dodaj Pojazd
+                </h3>
+                <button type="button" onclick="closeCarModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="car-form" onsubmit="saveCar(event)" class="mt-4 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Model / Nazwa auta *</label>
+                        <input type="text" id="input-car-name" required placeholder="np. BMW F10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Numer VIN *</label>
+                        <input type="text" id="input-car-vin" required placeholder="np. WBA5C71050D054064" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-amber-400 uppercase focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Właściciel pojazdu</label>
+                        <input type="text" id="input-car-owner" placeholder="np. Jan Kowalski / Prywatne" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Aktualny przebieg (w km lub kkm)</label>
+                        <input type="text" id="input-car-mileage" placeholder="np. 340000 lub 340kkm" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-amber-400 mb-1">Interwał wymiany oleju (km)</label>
+                        <input type="number" step="500" id="input-car-oil-interval" placeholder="np. 15000" value="15000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-amber-400 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Rejestracja / Oznaczenie</label>
+                        <input type="text" id="input-car-plate" placeholder="np. PO 12345 / 520d" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-800">
+                    <div class="text-xs font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-filter"></i> Numery porównawcze filtrów (OEM / referencyjne)
+                    </div>
+                    <p class="text-[11px] text-slate-400 mb-3">Numery porównawcze służą do szybkiego doboru zamienników w katalogu M-MOT.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Filtr oleju (nr porównawczy)</label>
+                            <input type="text" id="input-part-oil" placeholder="np. 8507683" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Filtr powietrza (nr porównawczy)</label>
+                            <input type="text" id="input-part-air" placeholder="np. 7800151" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Filtr kabinowy (nr porównawczy)</label>
+                            <input type="text" id="input-part-cabin" placeholder="np. 9272642" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Filtr paliwa (nr porównawczy)</label>
+                            <input type="text" id="input-part-fuel" placeholder="np. 7822499" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Inne części / specyfikacja oleju (opcjonalnie)</label>
+                    <input type="text" id="input-part-extra" placeholder="np. Olej 5W30 LL-04 5.2L, Klocki przód..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeCarModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+                        Anuluj
+                    </button>
+                    <button type="submit" id="save-car-btn" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 transition flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Zapisz pojazd
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -721,6 +854,74 @@
                             <i class="fa-solid fa-upload text-emerald-400"></i> Wgraj plik .JSON
                             <input type="file" accept=".json,application/json" onchange="importDatabaseJson(event)" class="hidden">
                         </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Własna konfiguracja łącza Firebase (opcjonalnie JSON)</label>
+                    <textarea id="input-custom-firebase-config" rows="3" placeholder='{"apiKey": "...", "projectId": "..."}' class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeConnectionModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition">
+                        Zamknij
+                    </button>
+                    <button type="button" onclick="applyCustomFirebaseConnection()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition">
+                        Zapisz i połącz
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PRZENIESIENIA PRZYPOMNIENIA NA INNY TERMIN -->
+    <div id="reschedule-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-regular fa-calendar-plus text-amber-400"></i> Przenieś termin przypomnienia
+                </h3>
+                <button type="button" onclick="closeRescheduleModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="saveRescheduledReminder(event)" class="mt-4 space-y-4">
+                <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs">
+                    <div id="reschedule-car-label" class="font-bold text-white text-sm">BMW F10</div>
+                    <div id="reschedule-current-due" class="text-slate-400 mt-0.5">Obecny termin: -</div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Wybierz nową datę przypomnienia *</label>
+                    <input type="date" id="input-reschedule-date" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1.5">Lub przesuń jednym kliknięciem:</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="applyQuickPostpone(7)" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition">+7 dni</button>
+                        <button type="button" onclick="applyQuickPostpone(14)" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition">+2 tygodnie</button>
+                        <button type="button" onclick="applyQuickPostpone(30)" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition">+1 miesiąc</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Notatka do zmiany terminu (opcjonalnie)</label>
+                    <input type="text" id="input-reschedule-note" placeholder="np. Umówiony mechanik po wypłacie..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeRescheduleModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+                        Anuluj
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-lg shadow-amber-600/30 transition">
+                        Zapisz nowy termin
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL POTWIEDZENIA USUNIĘCIA -->
     <div id="confirm-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4 no-print">
         <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl text-center space-y-4">
@@ -1452,17 +1653,24 @@
                     });
                 });
 
-                // Jeśli baza jest całkowicie pusta przy pierwszym uruchomieniu, automatycznie dodajemy auto F10 ze zdjęcia
-                if (loadedCars.length === 0 && !initialSeedDone) {
+                // Upewniamy się przy pierwszym uruchomieniu, że wszystkie auta z listy początkowej są w bazie
+                if (!initialSeedDone) {
                     initialSeedDone = true;
                     const initialList = getInitialCarsSeed();
+                    let addedAny = false;
                     for (const carItem of initialList) {
-                        await persistCarToFirestore(carItem);
+                        const existingCar = loadedCars.find(c => c.id === carItem.id || (c.vin && carItem.vin && c.vin.toUpperCase() === carItem.vin.toUpperCase()));
+                        if (!existingCar) {
+                            await persistCarToFirestore(carItem);
+                            addedAny = true;
+                        } else if ((!existingCar.records || existingCar.records.length === 0) && carItem.records && carItem.records.length > 0) {
+                            await persistCarToFirestore({ ...existingCar, records: carItem.records });
+                            addedAny = true;
+                        }
                     }
-                    return;
+                    if (addedAny) return;
                 }
 
-                initialSeedDone = true;
                 // Sortowanie w pamięci JS (RULE 2)
                 loadedCars.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
                 cars = loadedCars;
@@ -2669,7 +2877,12 @@
                     parts,
                     updatedAt: Date.now()
                 };
+                if (!currentUser || !db) {
+                    const idx = cars.findIndex(c => c.id === selectedCarId);
+                    if (idx >= 0) cars[idx] = updatedCar;
+                }
                 await persistCarToFirestore(updatedCar);
+                renderAll();
                 showToast('Zaktualizowano kartę pojazdu');
             } else {
                 const newCar = {

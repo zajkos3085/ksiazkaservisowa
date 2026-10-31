@@ -188,14 +188,19 @@
                 </div>
 
                 <!-- Szybki Eksport / Import kopii zapasowej JSON -->
-                <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2">
-                    <button onclick="exportDatabaseJson()" class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5" title="Pobierz kopię zapasową wszystkich aut do pliku JSON">
-                        <i class="fa-solid fa-download text-blue-400"></i> Eksportuj bazę
+                <div class="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
+                    <button onclick="restoreAllCarsAndOilChanges()" class="w-full py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-xs font-semibold text-amber-300 transition flex items-center justify-center gap-2 shadow-sm" title="Dograj wszystkie 11 pojazdów oraz brakujące wymiany oleju z Twojej listy">
+                        <i class="fa-solid fa-oil-can text-amber-400"></i> Uzupełnij wszystkie auta i wymiany oleju
                     </button>
-                    <label class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5 cursor-pointer" title="Wczytaj bazę pojazdów z pliku JSON">
-                        <i class="fa-solid fa-upload text-emerald-400"></i> Importuj
-                        <input type="file" id="import-json-input" accept=".json,application/json" onchange="importDatabaseJson(event)" class="hidden">
-                    </label>
+                    <div class="flex items-center gap-2">
+                        <button onclick="exportDatabaseJson()" class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5" title="Pobierz kopię zapasową wszystkich aut do pliku JSON">
+                            <i class="fa-solid fa-download text-blue-400"></i> Eksportuj bazę
+                        </button>
+                        <label class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5 cursor-pointer" title="Wczytaj bazę pojazdów z pliku JSON">
+                            <i class="fa-solid fa-upload text-emerald-400"></i> Importuj
+                            <input type="file" id="import-json-input" accept=".json,application/json" onchange="importDatabaseJson(event)" class="hidden">
+                        </label>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -1421,7 +1426,7 @@
                     name: 'Fabia',
                     vin: 'TMBAC25J6A3031844',
                     owner: '',
-                    mileage: 180000,
+                    mileage: 0,
                     oilIntervalKm: 15000,
                     plate: '',
                     parts: {
@@ -1438,12 +1443,12 @@
                             type: 'OIL',
                             title: 'Wymiana oleju',
                             date: '11.2025',
-                            mileage: 180000,
-                            rawMileageLabel: '180kkm',
+                            mileage: 0,
+                            rawMileageLabel: 'brak przebiegu',
                             cost: 0,
                             filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
                             partsUsed: 'Filtry: 030 115 561 AN, 036 129 620 H, 6Q0 819 653 B, 6Q0 201 051 C',
-                            description: 'Serwis olejowy.'
+                            description: 'Wymiana oleju 11.2025.'
                         }
                     ],
                     updatedAt: Date.now() - 5000
@@ -1519,7 +1524,7 @@
                     name: 'Peugeot Klaudii',
                     vin: 'VF36ERHRJ21406676',
                     owner: 'Klaudia',
-                    mileage: 150000,
+                    mileage: 0,
                     oilIntervalKm: 15000,
                     plate: '',
                     parts: {
@@ -1530,7 +1535,20 @@
                         extra: ''
                     },
                     todos: [],
-                    records: [],
+                    records: [
+                        {
+                            id: 'rec-peugeot-klaudii-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: 'Brak daty',
+                            mileage: 0,
+                            rawMileageLabel: '-',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
+                            partsUsed: 'Filtry: 98 189 149 80, 1444 EH, 6447 RG, 1906 89',
+                            description: 'Wymiana oleju i filtrów.'
+                        }
+                    ],
                     updatedAt: Date.now() - 8000
                 },
                 {
@@ -1538,7 +1556,7 @@
                     name: 'Bobcat 320',
                     vin: '511720004',
                     owner: 'Maszyna',
-                    mileage: 5000,
+                    mileage: 0,
                     oilIntervalKm: 500,
                     plate: 'S/N: 511720004',
                     parts: {
@@ -1549,7 +1567,20 @@
                         extra: 'Hydraulika: 6653336'
                     },
                     todos: [],
-                    records: [],
+                    records: [
+                        {
+                            id: 'rec-bobcat-1',
+                            type: 'OIL',
+                            title: 'Wymiana oleju',
+                            date: 'Brak daty',
+                            mileage: 0,
+                            rawMileageLabel: '-',
+                            cost: 0,
+                            filtersReplaced: { oil: true, air: true, cabin: false, fuel: true },
+                            partsUsed: 'Filtr oleju: 6671057, Filtr paliwa: 6667352, Filtr powietrza: 897064, Hydraulika: 6653336',
+                            description: 'Wymiana oleju i filtrów + hydraulika (6653336).'
+                        }
+                    ],
                     updatedAt: Date.now() - 9000
                 },
                 {
@@ -1653,7 +1684,7 @@
                     });
                 });
 
-                // Upewniamy się przy pierwszym uruchomieniu, że wszystkie auta z listy początkowej są w bazie
+                // Upewniamy się przy pierwszym uruchomieniu, że wszystkie auta z listy początkowej ORAZ ich wymiany oleju są w bazie
                 if (!initialSeedDone) {
                     initialSeedDone = true;
                     const initialList = getInitialCarsSeed();
@@ -1663,9 +1694,50 @@
                         if (!existingCar) {
                             await persistCarToFirestore(carItem);
                             addedAny = true;
-                        } else if ((!existingCar.records || existingCar.records.length === 0) && carItem.records && carItem.records.length > 0) {
-                            await persistCarToFirestore({ ...existingCar, records: carItem.records });
-                            addedAny = true;
+                        } else {
+                            // Sprawdzamy czy w istniejącym aucie brakuje któregokolwiek wpisu wymiany oleju lub filtrów z szablonu
+                            const existingRecords = Array.isArray(existingCar.records) ? [...existingCar.records] : [];
+                            let recordsChanged = false;
+                            for (const seedRec of (carItem.records || [])) {
+                                const alreadyHas = existingRecords.some(r => r.id === seedRec.id || (r.date === seedRec.date && parseMileageValue(r.mileage) === parseMileageValue(seedRec.mileage) && r.title === seedRec.title));
+                                if (!alreadyHas) {
+                                    existingRecords.push(seedRec);
+                                    recordsChanged = true;
+                                }
+                            }
+
+                            // Uzupełnij też listę "Do zrobienia" (np. 2l oleju w Astrze, 1l oleju w Corsie) jeśli pusta
+                            const existingTodos = Array.isArray(existingCar.todos) ? [...existingCar.todos] : [];
+                            let todosChanged = false;
+                            for (const seedTodo of (carItem.todos || [])) {
+                                if (!existingTodos.some(t => t.id === seedTodo.id || t.text === seedTodo.text)) {
+                                    existingTodos.push(seedTodo);
+                                    todosChanged = true;
+                                }
+                            }
+
+                            // Uzupełnij brakujące numery filtrów jeśli w bazie były puste
+                            const mergedParts = {
+                                oilFilter: existingCar.parts?.oilFilter || carItem.parts?.oilFilter || '',
+                                airFilter: existingCar.parts?.airFilter || carItem.parts?.airFilter || '',
+                                cabinFilter: existingCar.parts?.cabinFilter || carItem.parts?.cabinFilter || '',
+                                fuelFilter: existingCar.parts?.fuelFilter || carItem.parts?.fuelFilter || '',
+                                extra: existingCar.parts?.extra || carItem.parts?.extra || ''
+                            };
+                            const partsChanged = JSON.stringify(mergedParts) !== JSON.stringify(existingCar.parts || {});
+
+                            const newMileage = Math.max(parseMileageValue(existingCar.mileage), parseMileageValue(carItem.mileage));
+
+                            if (recordsChanged || todosChanged || partsChanged || newMileage !== parseMileageValue(existingCar.mileage)) {
+                                await persistCarToFirestore({
+                                    ...existingCar,
+                                    mileage: newMileage,
+                                    parts: mergedParts,
+                                    todos: existingTodos,
+                                    records: existingRecords
+                                });
+                                addedAny = true;
+                            }
                         }
                     }
                     if (addedAny) return;
@@ -1722,6 +1794,60 @@
             } catch (e) {
                 console.error(e);
                 showToast('Nie udało się zaimportować pojazdu', true);
+            }
+        };
+
+        // Funkcja ręcznego wymuszenia dogrania wszystkich 11 aut i ich wymian oleju
+        window.restoreAllCarsAndOilChanges = async function() {
+            const initialList = getInitialCarsSeed();
+            try {
+                setSyncIndicator('syncing', 'Uzupełnianie wymian...');
+                for (const seedCar of initialList) {
+                    const existingIdx = cars.findIndex(c => c.id === seedCar.id || (c.vin && seedCar.vin && c.vin.toUpperCase() === seedCar.vin.toUpperCase()));
+                    if (existingIdx >= 0) {
+                        const existingCar = cars[existingIdx];
+                        const mergedRecords = Array.isArray(existingCar.records) ? [...existingCar.records] : [];
+                        for (const sRec of (seedCar.records || [])) {
+                            const hasRec = mergedRecords.some(r => r.id === sRec.id || (r.date === sRec.date && parseMileageValue(r.mileage) === parseMileageValue(sRec.mileage)));
+                            if (!hasRec) mergedRecords.push(sRec);
+                        }
+                        const mergedTodos = Array.isArray(existingCar.todos) ? [...existingCar.todos] : [];
+                        for (const sTodo of (seedCar.todos || [])) {
+                            if (!mergedTodos.some(t => t.id === sTodo.id || t.text === sTodo.text)) {
+                                mergedTodos.push(sTodo);
+                            }
+                        }
+                        const updatedCar = {
+                            ...existingCar,
+                            mileage: Math.max(parseMileageValue(existingCar.mileage), parseMileageValue(seedCar.mileage)),
+                            parts: {
+                                oilFilter: existingCar.parts?.oilFilter || seedCar.parts?.oilFilter || '',
+                                airFilter: existingCar.parts?.airFilter || seedCar.parts?.airFilter || '',
+                                cabinFilter: existingCar.parts?.cabinFilter || seedCar.parts?.cabinFilter || '',
+                                fuelFilter: existingCar.parts?.fuelFilter || seedCar.parts?.fuelFilter || '',
+                                extra: existingCar.parts?.extra || seedCar.parts?.extra || ''
+                            },
+                            todos: mergedTodos,
+                            records: mergedRecords,
+                            updatedAt: Date.now()
+                        };
+                        cars[existingIdx] = updatedCar;
+                        if (currentUser && db) {
+                            await persistCarToFirestore(updatedCar);
+                        }
+                    } else {
+                        cars.push(seedCar);
+                        if (currentUser && db) {
+                            await persistCarToFirestore(seedCar);
+                        }
+                    }
+                }
+                setSyncIndicator('online', 'Zsynchronizowano');
+                renderAll();
+                showToast('Wszystkie 11 pojazdów oraz ich wymiany oleju zostały uzupełnione!');
+            } catch (e) {
+                console.error(e);
+                showToast('Błąd podczas uzupełniania wymian oleju', true);
             }
         };
 

@@ -189,8 +189,8 @@
 
                 <!-- Szybki Eksport / Import kopii zapasowej JSON -->
                 <div class="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
-                    <button onclick="restoreAllCarsAndOilChanges()" class="w-full py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-xs font-semibold text-amber-300 transition flex items-center justify-center gap-2 shadow-sm" title="Dograj wszystkie 11 pojazdów oraz brakujące wymiany oleju z Twojej listy">
-                        <i class="fa-solid fa-oil-can text-amber-400"></i> Uzupełnij wszystkie auta i wymiany oleju
+                    <button onclick="confirmClearAllCars()" class="w-full py-2 px-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-xs font-semibold text-red-300 transition flex items-center justify-center gap-2 shadow-sm" title="Usuń wszystkie pojazdy z bazy danych">
+                        <i class="fa-solid fa-trash-can text-red-400"></i> Wyczyść całą bazę pojazdów
                     </button>
                     <div class="flex items-center gap-2">
                         <button onclick="exportDatabaseJson()" class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5" title="Pobierz kopię zapasową wszystkich aut do pliku JSON">
@@ -970,7 +970,7 @@
         let selectedCarId = null;
         let isEditingCar = false;
         let editingRecordId = null;
-        let initialSeedDone = false;
+        let initialCleanupDone = false;
         let showAllUpcomingReminders = false;
         let activeRescheduleContext = null;
         let customShopUrlTemplate = 'https://webterminal.m-mot.pl/search/v2/product?searchOption=-1&frg={NR}&closelyMatching=false';
@@ -1623,8 +1623,8 @@
             try {
                 if (typeof __firebase_config === 'undefined' || !__firebase_config) {
                     setSyncIndicator('offline', 'Tryb lokalny');
-                    cars = getInitialCarsSeed();
-                    selectedCarId = null; // Karta pojazdu wyświetli się dopiero po kliknięciu
+                    cars = [];
+                    selectedCarId = null;
                     renderAll();
                     return;
                 }
@@ -1653,7 +1653,7 @@
             } catch (err) {
                 console.error('Błąd inicjalizacji Firebase:', err);
                 setSyncIndicator('offline', 'Błąd chmury');
-                cars = getInitialCarsSeed();
+                cars = [];
                 selectedCarId = null;
                 renderAll();
             }
@@ -1667,6 +1667,26 @@
             const carsColRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'cars');
 
             onSnapshot(carsColRef, async (snapshot) => {
+                // Jednorazowe automatyczne usunięcie wszystkich obecnych pojazdów z bazy na żądanie użytkownika
+                if (!initialCleanupDone) {
+                    initialCleanupDone = true;
+                    if (!snapshot.empty) {
+                        setSyncIndicator('syncing', 'Usuwanie pojazdów...');
+                        const deletePromises = [];
+                        snapshot.forEach((docSnap) => {
+                            const carDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cars', docSnap.id);
+                            deletePromises.push(deleteDoc(carDocRef));
+                        });
+                        await Promise.all(deletePromises);
+                        cars = [];
+                        selectedCarId = null;
+                        setSyncIndicator('online', 'Zsynchronizowano');
+                        renderAll();
+                        showToast('Wszystkie pojazdy zostały usunięte z bazy danych!');
+                        return;
+                    }
+                }
+
                 const loadedCars = [];
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
@@ -1683,65 +1703,6 @@
                         records: parsedRecords
                     });
                 });
-
-                // Upewniamy się przy pierwszym uruchomieniu, że wszystkie auta z listy początkowej ORAZ ich wymiany oleju są w bazie
-                if (!initialSeedDone) {
-                    initialSeedDone = true;
-                    const initialList = getInitialCarsSeed();
-                    let addedAny = false;
-                    for (const carItem of initialList) {
-                        const existingCar = loadedCars.find(c => c.id === carItem.id || (c.vin && carItem.vin && c.vin.toUpperCase() === carItem.vin.toUpperCase()));
-                        if (!existingCar) {
-                            await persistCarToFirestore(carItem);
-                            addedAny = true;
-                        } else {
-                            // Sprawdzamy czy w istniejącym aucie brakuje któregokolwiek wpisu wymiany oleju lub filtrów z szablonu
-                            const existingRecords = Array.isArray(existingCar.records) ? [...existingCar.records] : [];
-                            let recordsChanged = false;
-                            for (const seedRec of (carItem.records || [])) {
-                                const alreadyHas = existingRecords.some(r => r.id === seedRec.id || (r.date === seedRec.date && parseMileageValue(r.mileage) === parseMileageValue(seedRec.mileage) && r.title === seedRec.title));
-                                if (!alreadyHas) {
-                                    existingRecords.push(seedRec);
-                                    recordsChanged = true;
-                                }
-                            }
-
-                            // Uzupełnij też listę "Do zrobienia" (np. 2l oleju w Astrze, 1l oleju w Corsie) jeśli pusta
-                            const existingTodos = Array.isArray(existingCar.todos) ? [...existingCar.todos] : [];
-                            let todosChanged = false;
-                            for (const seedTodo of (carItem.todos || [])) {
-                                if (!existingTodos.some(t => t.id === seedTodo.id || t.text === seedTodo.text)) {
-                                    existingTodos.push(seedTodo);
-                                    todosChanged = true;
-                                }
-                            }
-
-                            // Uzupełnij brakujące numery filtrów jeśli w bazie były puste
-                            const mergedParts = {
-                                oilFilter: existingCar.parts?.oilFilter || carItem.parts?.oilFilter || '',
-                                airFilter: existingCar.parts?.airFilter || carItem.parts?.airFilter || '',
-                                cabinFilter: existingCar.parts?.cabinFilter || carItem.parts?.cabinFilter || '',
-                                fuelFilter: existingCar.parts?.fuelFilter || carItem.parts?.fuelFilter || '',
-                                extra: existingCar.parts?.extra || carItem.parts?.extra || ''
-                            };
-                            const partsChanged = JSON.stringify(mergedParts) !== JSON.stringify(existingCar.parts || {});
-
-                            const newMileage = Math.max(parseMileageValue(existingCar.mileage), parseMileageValue(carItem.mileage));
-
-                            if (recordsChanged || todosChanged || partsChanged || newMileage !== parseMileageValue(existingCar.mileage)) {
-                                await persistCarToFirestore({
-                                    ...existingCar,
-                                    mileage: newMileage,
-                                    parts: mergedParts,
-                                    todos: existingTodos,
-                                    records: existingRecords
-                                });
-                                addedAny = true;
-                            }
-                        }
-                    }
-                    if (addedAny) return;
-                }
 
                 // Sortowanie w pamięci JS (RULE 2)
                 loadedCars.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -1849,6 +1810,43 @@
                 console.error(e);
                 showToast('Błąd podczas uzupełniania wymian oleju', true);
             }
+        };
+
+        // Całkowite czyszczenie bazy danych ze wszystkich pojazdów
+        window.clearAllCarsFromDatabase = async function() {
+            try {
+                setSyncIndicator('syncing', 'Czyszczenie bazy...');
+                if (currentUser && db) {
+                    const deletePromises = cars.map(c => {
+                        const carDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cars', c.id);
+                        return deleteDoc(carDocRef);
+                    });
+                    await Promise.all(deletePromises);
+                }
+                cars = [];
+                selectedCarId = null;
+                setSyncIndicator('online', 'Zsynchronizowano');
+                renderAll();
+                showToast('Baza pojazdów została całkowicie wyczyszczona!');
+            } catch (e) {
+                console.error('Błąd czyszczenia bazy:', e);
+                showToast('Wystąpił błąd podczas usuwania pojazdów', true);
+            }
+        };
+
+        window.confirmClearAllCars = function() {
+            if (cars.length === 0) {
+                showToast('Baza pojazdów jest już pusta');
+                return;
+            }
+            document.getElementById('confirm-title').textContent = 'Usunąć wszystkie pojazdy z bazy?';
+            document.getElementById('confirm-desc').textContent = `Czy na pewno chcesz bezpowrotnie usunąć wszystkie pojazdy (${cars.length}) wraz z ich historią z bazy danych?`;
+            const btn = document.getElementById('confirm-action-btn');
+            btn.onclick = async () => {
+                await clearAllCarsFromDatabase();
+                closeConfirmModal();
+            };
+            document.getElementById('confirm-modal').classList.remove('hidden');
         };
 
         // Główne renderowanie całego interfejsu

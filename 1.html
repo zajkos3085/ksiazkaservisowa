@@ -171,27 +171,8 @@
                     </div>
                 </div>
 
-                <!-- Szybki import danych ze zdjęcia (BMW F10) -->
-                <div id="f10-import-banner" class="mt-4 pt-4 border-t border-slate-800/80 hidden">
-                    <button onclick="importF10FromScreenshot()" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-slate-800 to-slate-800/60 hover:from-blue-950/60 hover:to-slate-800 border border-slate-700 hover:border-blue-500/40 transition flex items-center justify-between group text-left">
-                        <div class="flex items-center space-x-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition">
-                                <i class="fa-solid fa-file-import text-sm"></i>
-                            </div>
-                            <div>
-                                <div class="text-xs font-semibold text-slate-200">Wczytaj dane F10 ze zdjęcia</div>
-                                <div class="text-[11px] text-slate-400 font-mono">WBA5C71050D054064</div>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-xs text-slate-500 group-hover:text-blue-400 transition"></i>
-                    </button>
-                </div>
-
                 <!-- Szybki Eksport / Import kopii zapasowej JSON -->
                 <div class="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
-                    <button onclick="confirmClearAllCars()" class="w-full py-2 px-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-xs font-semibold text-red-300 transition flex items-center justify-center gap-2 shadow-sm" title="Usuń wszystkie pojazdy z bazy danych">
-                        <i class="fa-solid fa-trash-can text-red-400"></i> Wyczyść całą bazę pojazdów
-                    </button>
                     <div class="flex items-center gap-2">
                         <button onclick="exportDatabaseJson()" class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5" title="Pobierz kopię zapasową wszystkich aut do pliku JSON">
                             <i class="fa-solid fa-download text-blue-400"></i> Eksportuj bazę
@@ -201,6 +182,9 @@
                             <input type="file" id="import-json-input" accept=".json,application/json" onchange="importDatabaseJson(event)" class="hidden">
                         </label>
                     </div>
+                    <button onclick="confirmClearAllCars()" class="w-full py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-[11px] font-semibold text-red-300 transition flex items-center justify-center gap-2" title="Usuń wszystkie pojazdy z bazy danych">
+                        <i class="fa-solid fa-trash-can text-red-400"></i> Wyczyść całą bazę pojazdów
+                    </button>
                 </div>
             </div>
         </aside>
@@ -239,22 +223,23 @@
                     </div>
                 </div>
 
-                <!-- Karta powitalna zachęcająca do wyboru pojazdu -->
+                <!-- Karta powitalna zachęcająca do wyboru lub dodania pojazdu -->
                 <div class="bg-garage-900 border border-slate-800 rounded-2xl p-8 sm:p-10 text-center shadow-xl">
                     <div class="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto mb-4 text-xl">
-                        <i class="fa-solid fa-hand-pointer"></i>
+                        <i class="fa-solid fa-car-side"></i>
                     </div>
-                    <h2 id="empty-state-title" class="text-xl font-bold text-white mb-2">Wybierz pojazd z garażu</h2>
+                    <h2 id="empty-state-title" class="text-xl font-bold text-white mb-2">Witaj w Cyfrowej Książce Serwisowej</h2>
                     <p id="empty-state-desc" class="text-slate-400 text-sm max-w-md mx-auto mb-6">
-                        Kliknij na konkretny samochód na liście po lewej stronie (lub powyżej na telefonie), aby otworzyć jego kartę serwisową, sprawdzić numery filtrów oraz historię napraw.
+                        Dodaj swój pierwszy samochód do garażu, aby prowadzić historię wymian oleju, przeglądów i napraw oraz zapisywać numery porównawcze filtrów.
                     </p>
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <button id="empty-state-f10-btn" onclick="importF10FromScreenshot()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-bolt"></i> Załaduj moje F10 ze zdjęcia
+                        <button onclick="openCarModal()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Dodaj pierwszy pojazd
                         </button>
-                        <button onclick="openCarModal()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm border border-slate-700 transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-plus"></i> Dodaj nowy pojazd
-                        </button>
+                        <label class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm border border-slate-700 transition flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-upload text-emerald-400"></i> Wczytaj bazę z pliku (.JSON)
+                            <input type="file" accept=".json,application/json" onchange="importDatabaseJson(event)" class="hidden">
+                        </label>
                     </div>
                 </div>
             </div>
@@ -267,13 +252,57 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <div class="text-xs uppercase tracking-widest text-slate-500 font-bold">Karta Historii Pojazdu / Książka Serwisowa</div>
-                            <h1 id="print-car-name" class="text-3xl font-extrabold text-slate-900 mt-1">BMW F10</h1>
+                            <h1 id="print-car-name" class="text-3xl font-extrabold text-slate-900 mt-1">Pojazd</h1>
                             <div class="mt-2 font-mono text-sm text-slate-700">
-                                <span>VIN: <strong id="print-car-vin">WBA5C71050D054064</strong></span>
+                                <span>VIN: <strong id="print-car-vin">-</strong></span>
                                 <span class="mx-3">|</span>
                                 <span>Właściciel: <strong id="print-car-owner">-</strong></span>
                                 <span class="mx-3">|</span>
-                                <span>Aktualny przebieg: <strong id="print-car-mileage">340 000 km</strong></span>
+                                <span>Aktualny przebieg: <strong id="print-car-mileage">-</strong></span>
+                            </div>
+                        </div>
+                        <div class="text-right text-xs text-slate-500">
+                            <div>Wygenerowano z systemu AutoLog</div>
+                            <div id="print-date" class="font-mono mt-1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KARTA GŁÓWNA POJAZDU -->
+                <div class="bg-gradient-to-br from-garage-900 via-garage-900 to-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden no-print">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center flex-wrap gap-2.5">
+                                <button onclick="closeCarDetails()" class="px-2.5 py-0.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-md transition flex items-center gap-1.5" title="Zamknij kartę pojazdu">
+                                    <i class="fa-solid fa-arrow-left text-[10px]"></i> Powrót
+                                </button>
+                                <span id="detail-car-badge" class="px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-md">
+                                    Karta Pojazdu
+                                </span>
+                                <span id="detail-car-owner" class="hidden text-xs font-semibold bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
+                                    <i class="fa-solid fa-user text-[10px]"></i> <span id="detail-car-owner-text"></span>
+                                </span>
+                                <span id="detail-car-plate" class="hidden font-mono text-xs bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-0.5 rounded-md"></span>
+                            </div>
+                            <h2 id="detail-car-name" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Pojazd</h2>
+                            
+                            <!-- Numer VIN z przyciskiem kopiowania -->
+                            <div class="flex items-center space-x-2 pt-1">
+                                <span class="text-xs text-slate-400">VIN:</span>
+                                <code id="detail-car-vin" class="font-mono text-xs sm:text-sm bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-lg text-amber-400 tracking-wider select-all">-</code>
+                                <button onclick="copyVin()" class="p-1.5 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg transition text-xs" title="Skopiuj VIN">
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Statystyki i przyciski akcji pojazdu -->
+                        <div class="flex flex-wrap sm:flex-col items-start sm:items-end justify-between gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
+                            <div class="bg-slate-950/70 border border-slate-800/90 px-4 py-2 rounded-xl text-left sm:text-right">
+                                <div class="text-[11px] uppercase tracking-wider text-slate-400">Ostatni odnotowany przebieg</div>
+                                <div id="detail-car-mileage" class="text-lg sm:text-xl font-mono font-bold text-emerald-400">0 km</div>
                             </div>
                         </div>
                         <div class="text-right text-xs text-slate-500">
@@ -401,7 +430,7 @@
                                     <i class="fa-solid fa-arrow-up-right-from-square text-[11px] opacity-75 group-hover:opacity-100 transition text-blue-400" title="Otwórz w M-MOT"></i>
                                 </div>
                             </div>
-                            <div id="part-oil" class="font-mono font-bold text-sm sm:text-base text-slate-100 group-hover:text-blue-300 print-text-dark tracking-wide transition">8507683</div>
+                            <div id="part-oil" class="font-mono font-bold text-sm sm:text-base text-slate-100 group-hover:text-blue-300 print-text-dark tracking-wide transition">Brak</div>
                             <div class="text-[10px] text-blue-400/80 print-text-muted mt-0.5 flex items-center gap-1">
                                 <i class="fa-solid fa-cart-shopping text-[9px] no-print"></i> Szukaj w M-MOT
                             </div>
@@ -418,7 +447,7 @@
                                     <i class="fa-solid fa-arrow-up-right-from-square text-[11px] opacity-75 group-hover:opacity-100 transition text-blue-400" title="Otwórz w M-MOT"></i>
                                 </div>
                             </div>
-                            <div id="part-air" class="font-mono font-bold text-sm sm:text-base text-slate-100 group-hover:text-blue-300 print-text-dark tracking-wide transition">7800151</div>
+                            <div id="part-air" class="font-mono font-bold text-sm sm:text-base text-slate-100 group-hover:text-blue-300 print-text-dark tracking-wide transition">Brak</div>
                             <div class="text-[10px] text-blue-400/80 print-text-muted mt-0.5 flex items-center gap-1">
                                 <i class="fa-solid fa-cart-shopping text-[9px] no-print"></i> Szukaj w M-MOT
                             </div>
@@ -435,7 +464,7 @@
                                     <i class="fa-solid fa-arrow-up-right-from-square text-[11px] opacity-75 group-hover:opacity-100 transition text-blue-400" title="Otwórz w M-MOT"></i>
                                 </div>
                             </div>
-                            <div id="part-cabin" class="font-mono font-bold text-sm sm:text-base text-slate-100 group-hover:text-blue-300 print-text-dark tracking-wide transition">9272642</div>
+                            <div id="part-cabin" class="font-mono font-bold text-sm sm:text-base text-slate-100 group-hover:text-blue-300 print-text-dark tracking-wide transition">Brak</div>
                             <div class="text-[10px] text-blue-400/80 print-text-muted mt-0.5 flex items-center gap-1">
                                 <i class="fa-solid fa-cart-shopping text-[9px] no-print"></i> Szukaj w M-MOT
                             </div>
@@ -452,7 +481,7 @@
                                     <i class="fa-solid fa-arrow-up-right-from-square text-[11px] opacity-75 group-hover:opacity-100 transition text-blue-400" title="Otwórz w M-MOT"></i>
                                 </div>
                             </div>
-                            <div id="part-fuel" class="font-mono font-bold text-sm sm:text-base text-slate-100 group-hover:text-blue-300 print-text-dark tracking-wide transition">7822499</div>
+                            <div id="part-fuel" class="font-mono font-bold text-sm sm:text-base text-slate-100 group-hover:text-blue-300 print-text-dark tracking-wide transition">Brak</div>
                             <div class="text-[10px] text-blue-400/80 print-text-muted mt-0.5 flex items-center gap-1">
                                 <i class="fa-solid fa-cart-shopping text-[9px] no-print"></i> Szukaj w M-MOT
                             </div>
@@ -970,7 +999,6 @@
         let selectedCarId = null;
         let isEditingCar = false;
         let editingRecordId = null;
-        let initialCleanupDone = false;
         let showAllUpcomingReminders = false;
         let activeRescheduleContext = null;
         let customShopUrlTemplate = 'https://webterminal.m-mot.pl/search/v2/product?searchOption=-1&frg={NR}&closelyMatching=false';
@@ -1242,382 +1270,6 @@
             }
         };
 
-        // Domyślny obiekt samochodu ze zdjęcia użytkownika (BMW F10)
-        function getF10TemplateData() {
-            return {
-                id: 'bmw-f10-wba5c71050d054064',
-                name: 'BMW F10',
-                vin: 'WBA5C71050D054064',
-                owner: '',
-                mileage: 340000,
-                oilIntervalKm: 15000,
-                plate: 'Seria 5 (F10)',
-                parts: {
-                    oilFilter: '8507683',
-                    airFilter: '7800151',
-                    cabinFilter: '9272642',
-                    fuelFilter: '7822499',
-                    extra: ''
-                },
-                todos: [],
-                records: [
-                    {
-                        id: 'rec-oil-2026-06',
-                        type: 'OIL',
-                        title: 'Wymiana oleju',
-                        date: '06.2026',
-                        mileage: 340000,
-                        rawMileageLabel: '340kkm',
-                        cost: 0,
-                        filtersReplaced: {
-                            oil: true,
-                            air: false,
-                            cabin: false,
-                            fuel: false
-                        },
-                        partsUsed: 'Wymiana oleju + filtr oleju (zamiennik wg nr porównawczego 8507683)',
-                        description: 'Serwis olejowy przy przebiegu 340kkm (zgodnie z notatką serwisową).'
-                    },
-                    {
-                        id: 'rec-oil-2025-04',
-                        type: 'OIL',
-                        title: 'Wymiana oleju',
-                        date: '04.2025',
-                        mileage: 325000,
-                        rawMileageLabel: '325kkm',
-                        cost: 0,
-                        filtersReplaced: {
-                            oil: true,
-                            air: true,
-                            cabin: true,
-                            fuel: true
-                        },
-                        partsUsed: 'Komplet filtrów (zamienniki wg nr porównawczych: oleju 8507683, powietrza 7800151, kabinowy 9272642, paliwa 7822499)',
-                        description: 'Serwis olejowy przy przebiegu 325kkm (zgodnie z notatką serwisową).'
-                    }
-                ],
-                updatedAt: Date.now()
-            };
-        }
-
-        // Pełna początkowa lista pojazdów wraz z Twoimi autami (F10, Peugeot taty, Łukasza, BMW Patrycji, Astra, Fabia, Corsa, Mercedes, Peugeot Klaudii, Bobcat, Caddy)
-        function getInitialCarsSeed() {
-            return [
-                getF10TemplateData(),
-                {
-                    id: 'car-peugeot-taty',
-                    name: 'Peugeot taty',
-                    vin: 'VF33H9HXC83993042',
-                    owner: 'Tata',
-                    mileage: 215000,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: '1109 AY',
-                        airFilter: '1444 CP',
-                        cabinFilter: '6447 KL',
-                        fuelFilter: '1901 95',
-                        extra: ''
-                    },
-                    todos: [],
-                    records: [
-                        {
-                            id: 'rec-peugeot-taty-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: '12.2025',
-                            mileage: 215000,
-                            rawMileageLabel: '215kkm',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
-                            partsUsed: 'Filtry: 1109 AY, 1444 CP, 6447 KL, 1901 95',
-                            description: 'Wymiana oleju i komplet filtrów.'
-                        }
-                    ],
-                    updatedAt: Date.now() - 1000
-                },
-                {
-                    id: 'car-peugeot-lukasza',
-                    name: 'Peugeot Łukasza',
-                    vin: 'VF33H9HZC84924340',
-                    owner: 'Łukasz',
-                    mileage: 200000,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: '1109 AY',
-                        airFilter: '1444 CP',
-                        cabinFilter: '6447 KL',
-                        fuelFilter: '1901 95',
-                        extra: ''
-                    },
-                    todos: [],
-                    records: [],
-                    updatedAt: Date.now() - 2000
-                },
-                {
-                    id: 'car-bmw-patrycja',
-                    name: 'BMW Patrycja',
-                    vin: 'WBA8J91050K726375',
-                    owner: 'Patrycja',
-                    mileage: 305000,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: '8 575 211',
-                        airFilter: '8 511 668',
-                        cabinFilter: '9 237 555',
-                        fuelFilter: '8 572 522',
-                        extra: ''
-                    },
-                    todos: [],
-                    records: [
-                        {
-                            id: 'rec-bmw-patrycja-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: '04.2026',
-                            mileage: 305000,
-                            rawMileageLabel: '305kkm',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
-                            partsUsed: 'Filtry OEM/porównawcze: 8 575 211, 8 511 668, 9 237 555, 8 572 522',
-                            description: 'Serwis olejowy.'
-                        }
-                    ],
-                    updatedAt: Date.now() - 3000
-                },
-                {
-                    id: 'car-astra',
-                    name: 'Astra',
-                    vin: 'W0L0AHL0895063234',
-                    owner: '',
-                    mileage: 241000,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: '55594651',
-                        airFilter: '93192885',
-                        cabinFilter: '95528292',
-                        fuelFilter: '',
-                        extra: 'Do następnej wymiany potrzeba 2l oleju, korek spustowy oleju i uszczelnienie'
-                    },
-                    todos: [
-                        { id: 't-astra-1', text: 'Kupić 2l oleju, korek spustowy i uszczelnienie do następnej wymiany', priority: 'BUY', done: false, createdAt: '05.2026' }
-                    ],
-                    records: [
-                        {
-                            id: 'rec-astra-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: '05.2026',
-                            mileage: 241000,
-                            rawMileageLabel: '241kkm',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: false },
-                            partsUsed: 'Filtry: 55594651, 93192885, 95528292',
-                            description: 'Wymiana oleju i filtrów.'
-                        }
-                    ],
-                    updatedAt: Date.now() - 4000
-                },
-                {
-                    id: 'car-fabia',
-                    name: 'Fabia',
-                    vin: 'TMBAC25J6A3031844',
-                    owner: '',
-                    mileage: 0,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: '030 115 561 AN',
-                        airFilter: '036 129 620 H',
-                        cabinFilter: '6Q0 819 653 B',
-                        fuelFilter: '6Q0 201 051 C',
-                        extra: ''
-                    },
-                    todos: [],
-                    records: [
-                        {
-                            id: 'rec-fabia-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: '11.2025',
-                            mileage: 0,
-                            rawMileageLabel: 'brak przebiegu',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
-                            partsUsed: 'Filtry: 030 115 561 AN, 036 129 620 H, 6Q0 819 653 B, 6Q0 201 051 C',
-                            description: 'Wymiana oleju 11.2025.'
-                        }
-                    ],
-                    updatedAt: Date.now() - 5000
-                },
-                {
-                    id: 'car-corsa',
-                    name: 'Corsa',
-                    vin: 'VXKUPHNKKL4338721',
-                    owner: '',
-                    mileage: 52000,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: '1109AL',
-                        airFilter: '9805552080',
-                        cabinFilter: '9833351080',
-                        fuelFilter: '',
-                        extra: 'Do następnej wymiany: uszczelnienie korka, 1l oleju'
-                    },
-                    todos: [
-                        { id: 't-corsa-1', text: 'Kupić 1l oleju i uszczelnienie korka do następnego serwisu', priority: 'BUY', done: false, createdAt: '05.2026' }
-                    ],
-                    records: [
-                        {
-                            id: 'rec-corsa-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: '05.2026',
-                            mileage: 52000,
-                            rawMileageLabel: '52kkm',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: false },
-                            partsUsed: 'Filtry: 1109AL, 9805552080, 9833351080',
-                            description: 'Wymiana oleju przy przebiegu 52kkm.'
-                        }
-                    ],
-                    updatedAt: Date.now() - 6000
-                },
-                {
-                    id: 'car-mercedes',
-                    name: 'Mercedes',
-                    vin: 'W1K1770871N287940',
-                    owner: '',
-                    mileage: 40000,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: 'A 281 180 02 10',
-                        airFilter: 'A 282 094 00 04',
-                        cabinFilter: 'A 247 830 72 03',
-                        fuelFilter: '',
-                        extra: ''
-                    },
-                    todos: [],
-                    records: [
-                        {
-                            id: 'rec-mercedes-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: '11.2025',
-                            mileage: 40000,
-                            rawMileageLabel: '40kkm',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: false },
-                            partsUsed: 'Filtry OEM: A 281 180 02 10, A 282 094 00 04, A 247 830 72 03',
-                            description: 'Serwis olejowy przy 40kkm.'
-                        }
-                    ],
-                    updatedAt: Date.now() - 7000
-                },
-                {
-                    id: 'car-peugeot-klaudii',
-                    name: 'Peugeot Klaudii',
-                    vin: 'VF36ERHRJ21406676',
-                    owner: 'Klaudia',
-                    mileage: 0,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: '98 189 149 80',
-                        airFilter: '1444 EH',
-                        cabinFilter: '6447 RG',
-                        fuelFilter: '1906 89',
-                        extra: ''
-                    },
-                    todos: [],
-                    records: [
-                        {
-                            id: 'rec-peugeot-klaudii-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: 'Brak daty',
-                            mileage: 0,
-                            rawMileageLabel: '-',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
-                            partsUsed: 'Filtry: 98 189 149 80, 1444 EH, 6447 RG, 1906 89',
-                            description: 'Wymiana oleju i filtrów.'
-                        }
-                    ],
-                    updatedAt: Date.now() - 8000
-                },
-                {
-                    id: 'car-bobcat',
-                    name: 'Bobcat 320',
-                    vin: '511720004',
-                    owner: 'Maszyna',
-                    mileage: 0,
-                    oilIntervalKm: 500,
-                    plate: 'S/N: 511720004',
-                    parts: {
-                        oilFilter: '6671057',
-                        airFilter: '897064',
-                        cabinFilter: '',
-                        fuelFilter: '6667352',
-                        extra: 'Hydraulika: 6653336'
-                    },
-                    todos: [],
-                    records: [
-                        {
-                            id: 'rec-bobcat-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: 'Brak daty',
-                            mileage: 0,
-                            rawMileageLabel: '-',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: false, fuel: true },
-                            partsUsed: 'Filtr oleju: 6671057, Filtr paliwa: 6667352, Filtr powietrza: 897064, Hydraulika: 6653336',
-                            description: 'Wymiana oleju i filtrów + hydraulika (6653336).'
-                        }
-                    ],
-                    updatedAt: Date.now() - 9000
-                },
-                {
-                    id: 'car-caddy',
-                    name: 'Caddy Piotrka',
-                    vin: 'WV2ZZZ2KZEX009052',
-                    owner: 'Piotrek',
-                    mileage: 250000,
-                    oilIntervalKm: 15000,
-                    plate: '',
-                    parts: {
-                        oilFilter: '03L 115 562',
-                        airFilter: '1K0 129 620 D',
-                        cabinFilter: '1K1 819 669',
-                        fuelFilter: '3C0 127 434',
-                        extra: ''
-                    },
-                    todos: [],
-                    records: [
-                        {
-                            id: 'rec-caddy-1',
-                            type: 'OIL',
-                            title: 'Wymiana oleju',
-                            date: '09.2023',
-                            mileage: 250000,
-                            rawMileageLabel: '250kkm',
-                            cost: 0,
-                            filtersReplaced: { oil: true, air: true, cabin: true, fuel: true },
-                            partsUsed: 'Filtry: 03L 115 562, 3C0 127 434, 1K0 129 620 D, 1K1 819 669',
-                            description: 'Serwis olejowy przy 250kkm.'
-                        }
-                    ],
-                    updatedAt: Date.now() - 10000
-                }
-            ];
-        }
-
         // Inicjalizacja Firebase i uwierzytelniania (zgodnie z wymogami RULE 1, 2, 3)
         async function initFirebase() {
             try {
@@ -1666,27 +1318,7 @@
             // RULE 1: Strict Path
             const carsColRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'cars');
 
-            onSnapshot(carsColRef, async (snapshot) => {
-                // Jednorazowe automatyczne usunięcie wszystkich obecnych pojazdów z bazy na żądanie użytkownika
-                if (!initialCleanupDone) {
-                    initialCleanupDone = true;
-                    if (!snapshot.empty) {
-                        setSyncIndicator('syncing', 'Usuwanie pojazdów...');
-                        const deletePromises = [];
-                        snapshot.forEach((docSnap) => {
-                            const carDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cars', docSnap.id);
-                            deletePromises.push(deleteDoc(carDocRef));
-                        });
-                        await Promise.all(deletePromises);
-                        cars = [];
-                        selectedCarId = null;
-                        setSyncIndicator('online', 'Zsynchronizowano');
-                        renderAll();
-                        showToast('Wszystkie pojazdy zostały usunięte z bazy danych!');
-                        return;
-                    }
-                }
-
+            onSnapshot(carsColRef, (snapshot) => {
                 const loadedCars = [];
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
@@ -1736,82 +1368,6 @@
             setSyncIndicator('online', 'Zsynchronizowano');
         }
 
-        // Import danych F10 bezpośrednio ze zrzutu ekranu
-        window.importF10FromScreenshot = async function(silent = false) {
-            const f10Data = getF10TemplateData();
-            try {
-                if (currentUser && db) {
-                    await persistCarToFirestore(f10Data);
-                } else {
-                    const existingIndex = cars.findIndex(c => c.id === f10Data.id);
-                    if (existingIndex >= 0) cars[existingIndex] = f10Data;
-                    else cars.unshift(f10Data);
-                }
-                if (!silent) {
-                    selectedCarId = f10Data.id;
-                    showToast('Wczytano dane BMW F10 (WBA5C71050D054064) wraz z filtrami i historią!');
-                }
-                renderAll();
-            } catch (e) {
-                console.error(e);
-                showToast('Nie udało się zaimportować pojazdu', true);
-            }
-        };
-
-        // Funkcja ręcznego wymuszenia dogrania wszystkich 11 aut i ich wymian oleju
-        window.restoreAllCarsAndOilChanges = async function() {
-            const initialList = getInitialCarsSeed();
-            try {
-                setSyncIndicator('syncing', 'Uzupełnianie wymian...');
-                for (const seedCar of initialList) {
-                    const existingIdx = cars.findIndex(c => c.id === seedCar.id || (c.vin && seedCar.vin && c.vin.toUpperCase() === seedCar.vin.toUpperCase()));
-                    if (existingIdx >= 0) {
-                        const existingCar = cars[existingIdx];
-                        const mergedRecords = Array.isArray(existingCar.records) ? [...existingCar.records] : [];
-                        for (const sRec of (seedCar.records || [])) {
-                            const hasRec = mergedRecords.some(r => r.id === sRec.id || (r.date === sRec.date && parseMileageValue(r.mileage) === parseMileageValue(sRec.mileage)));
-                            if (!hasRec) mergedRecords.push(sRec);
-                        }
-                        const mergedTodos = Array.isArray(existingCar.todos) ? [...existingCar.todos] : [];
-                        for (const sTodo of (seedCar.todos || [])) {
-                            if (!mergedTodos.some(t => t.id === sTodo.id || t.text === sTodo.text)) {
-                                mergedTodos.push(sTodo);
-                            }
-                        }
-                        const updatedCar = {
-                            ...existingCar,
-                            mileage: Math.max(parseMileageValue(existingCar.mileage), parseMileageValue(seedCar.mileage)),
-                            parts: {
-                                oilFilter: existingCar.parts?.oilFilter || seedCar.parts?.oilFilter || '',
-                                airFilter: existingCar.parts?.airFilter || seedCar.parts?.airFilter || '',
-                                cabinFilter: existingCar.parts?.cabinFilter || seedCar.parts?.cabinFilter || '',
-                                fuelFilter: existingCar.parts?.fuelFilter || seedCar.parts?.fuelFilter || '',
-                                extra: existingCar.parts?.extra || seedCar.parts?.extra || ''
-                            },
-                            todos: mergedTodos,
-                            records: mergedRecords,
-                            updatedAt: Date.now()
-                        };
-                        cars[existingIdx] = updatedCar;
-                        if (currentUser && db) {
-                            await persistCarToFirestore(updatedCar);
-                        }
-                    } else {
-                        cars.push(seedCar);
-                        if (currentUser && db) {
-                            await persistCarToFirestore(seedCar);
-                        }
-                    }
-                }
-                setSyncIndicator('online', 'Zsynchronizowano');
-                renderAll();
-                showToast('Wszystkie 11 pojazdów oraz ich wymiany oleju zostały uzupełnione!');
-            } catch (e) {
-                console.error(e);
-                showToast('Błąd podczas uzupełniania wymian oleju', true);
-            }
-        };
-
         // Całkowite czyszczenie bazy danych ze wszystkich pojazdów
         window.clearAllCarsFromDatabase = async function() {
             try {
@@ -1859,18 +1415,9 @@
         window.renderCarsSidebar = function() {
             const listEl = document.getElementById('cars-list');
             const countEl = document.getElementById('cars-count');
-            const f10Banner = document.getElementById('f10-import-banner');
             const searchQuery = (document.getElementById('search-car-input')?.value || '').toLowerCase().trim();
 
             countEl.textContent = cars.length;
-
-            // Pokaż przycisk przywrócenia F10 jeśli nie ma auta o tym VINie na liście
-            const hasF10 = cars.some(c => (c.vin || '').toUpperCase() === 'WBA5C71050D054064');
-            if (hasF10) {
-                f10Banner.classList.add('hidden');
-            } else {
-                f10Banner.classList.remove('hidden');
-            }
 
             if (cars.length === 0) {
                 listEl.innerHTML = `
@@ -1958,25 +1505,18 @@
             const detailsView = document.getElementById('car-details-view');
             const emptyTitle = document.getElementById('empty-state-title');
             const emptyDesc = document.getElementById('empty-state-desc');
-            const emptyF10Btn = document.getElementById('empty-state-f10-btn');
 
             const car = cars.find(c => c.id === selectedCarId);
             if (!car) {
                 emptyState.classList.remove('hidden');
                 detailsView.classList.add('hidden');
 
-                const hasF10 = cars.some(c => (c.vin || '').toUpperCase() === 'WBA5C71050D054064');
                 if (cars.length > 0) {
                     emptyTitle.textContent = 'Wybierz samochód ze swojego garażu';
                     emptyDesc.textContent = 'Kliknij na wybrane auto na liście w sekcji "Twój Garaż", aby wyświetlić jego kartę pojazdu, numery filtrów oraz pełną historię serwisową.';
                 } else {
                     emptyTitle.textContent = 'Twój garaż jest pusty';
-                    emptyDesc.textContent = 'Dodaj swój pierwszy samochód ręcznie lub załaduj dane swojego BMW F10 ze zdjęcia.';
-                }
-                if (hasF10) {
-                    emptyF10Btn.classList.add('hidden');
-                } else {
-                    emptyF10Btn.classList.remove('hidden');
+                    emptyDesc.textContent = 'Dodaj swój pierwszy samochód za pomocą przycisku poniżej, aby prowadzić książkę serwisową, kontrolować interwały wymian oleju i zapisywać numery części.';
                 }
                 renderRemindersPanel();
                 return;

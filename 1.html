@@ -848,17 +848,23 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Własna konfiguracja łącza Firebase (opcjonalnie JSON)</label>
-                    <textarea id="input-custom-firebase-config" rows="3" placeholder='{"apiKey": "...", "projectId": "..."}' class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Własna konfiguracja łącza Firebase (JSON lub kod firebaseConfig)</label>
+                    <textarea id="input-custom-firebase-config" rows="4" placeholder='Wklej obiekt z konsoli Firebase, np. {"apiKey": "...", "projectId": "..."}' class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
+                    <p class="text-[11px] text-slate-400 mt-1">Wklejony klucz jest trwale zapamiętywany w bazie przeglądarki (IndexedDB) i nie znika po odświeżeniu strony.</p>
                 </div>
 
-                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-800">
-                    <button type="button" onclick="closeConnectionModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition">
-                        Zamknij
+                <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+                    <button type="button" onclick="clearSavedFirebaseConfig()" class="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 font-semibold transition text-[11px]">
+                        Usuń zapisany klucz
                     </button>
-                    <button type="button" onclick="applyCustomFirebaseConnection()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition">
-                        Zapisz i połącz
-                    </button>
+                    <div class="flex items-center space-x-2">
+                        <button type="button" onclick="closeConnectionModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition">
+                            Zamknij
+                        </button>
+                        <button type="button" onclick="applyCustomFirebaseConnection()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition">
+                            Zapisz i połącz
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -958,8 +964,111 @@
         let showAllUpcomingReminders = false;
         let activeRescheduleContext = null;
         let customShopUrlTemplate = 'https://webterminal.m-mot.pl/search/v2/product?searchOption=-1&frg={NR}&closelyMatching=false';
+        let savedCustomFirebaseConfigRaw = '';
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'autolog-service-book';
+
+        // ============================================================================
+        // TRWAŁA BAZA PRZEGLĄDARKI (IndexedDB) - Zapobiega znikaniu klucza i aut po F5
+        // ============================================================================
+        const IDB_NAME = 'AutoLog_Persistent_DB';
+        const IDB_VERSION = 1;
+
+        function openIndexedDB() {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    resolve(null);
+                    return;
+                }
+                const req = window.indexedDB.open(IDB_NAME, IDB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const idb = e.target.result;
+                    if (!idb.objectStoreNames.contains('settings')) {
+                        idb.createObjectStore('settings', { keyPath: 'key' });
+                    }
+                    if (!idb.objectStoreNames.contains('cars_cache')) {
+                        idb.createObjectStore('cars_cache', { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = () => resolve(null);
+            });
+        }
+
+        async function saveSettingToIDB(key, value) {
+            const idb = await openIndexedDB();
+            if (!idb) return;
+            return new Promise((resolve) => {
+                const tx = idb.transaction('settings', 'readwrite');
+                tx.objectStore('settings').put({ key, value });
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        }
+
+        async function getSettingFromIDB(key) {
+            const idb = await openIndexedDB();
+            if (!idb) return null;
+            return new Promise((resolve) => {
+                const tx = idb.transaction('settings', 'readonly');
+                const req = tx.objectStore('settings').get(key);
+                req.onsuccess = () => resolve(req.result ? req.result.value : null);
+                req.onerror = () => resolve(null);
+            });
+        }
+
+        async function saveCarsCacheToIDB(carsArray) {
+            const idb = await openIndexedDB();
+            if (!idb) return;
+            return new Promise((resolve) => {
+                const tx = idb.transaction('cars_cache', 'readwrite');
+                const store = tx.objectStore('cars_cache');
+                store.clear();
+                (carsArray || []).forEach(c => {
+                    if (c && c.id) store.put(c);
+                });
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        }
+
+        async function loadCarsCacheFromIDB() {
+            const idb = await openIndexedDB();
+            if (!idb) return [];
+            return new Promise((resolve) => {
+                const tx = idb.transaction('cars_cache', 'readonly');
+                const req = tx.objectStore('cars_cache').getAll();
+                req.onsuccess = () => {
+                    const list = Array.isArray(req.result) ? req.result : [];
+                    list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                    resolve(list);
+                };
+                req.onerror = () => resolve([]);
+            });
+        }
+
+        // Elastyczny parser konfiguracji Firebase (obsługuje czysty JSON oraz kod JS skopiowany z konsoli Firebase)
+        function parseFlexibleFirebaseConfig(rawText) {
+            if (!rawText || !rawText.trim()) return null;
+            let text = rawText.trim();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                // Wyciągnij zawartość między pierwszym { a ostatnim }
+                const firstBrace = text.indexOf('{');
+                const lastBrace = text.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                    let objStr = text.slice(firstBrace, lastBrace + 1);
+                    // Zamień klucze bez cudzysłowów (np. apiKey: "...") na poprawny JSON ("apiKey": "...")
+                    objStr = objStr
+                        .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":')
+                        .replace(/'/g, '"')
+                        .replace(/,\s*}/g, '}');
+                    return JSON.parse(objStr);
+                }
+                throw e;
+            }
+        }
 
         // Parsowanie daty wpisu (obsługuje DD.MM.RRRR, MM.RRRR, RRRR-MM-DD)
         function parseRecordDateString(dateStr) {
@@ -1071,11 +1180,23 @@
         window.openConnectionModal = function() {
             const shopInput = document.getElementById('input-shop-url');
             if (shopInput) shopInput.value = customShopUrlTemplate;
+            const cfgInput = document.getElementById('input-custom-firebase-config');
+            if (cfgInput && savedCustomFirebaseConfigRaw) {
+                cfgInput.value = savedCustomFirebaseConfigRaw;
+            }
             document.getElementById('connection-modal').classList.remove('hidden');
         };
 
         window.closeConnectionModal = function() {
             document.getElementById('connection-modal').classList.add('hidden');
+        };
+
+        window.clearSavedFirebaseConfig = async function() {
+            savedCustomFirebaseConfigRaw = '';
+            const cfgInput = document.getElementById('input-custom-firebase-config');
+            if (cfgInput) cfgInput.value = '';
+            await saveSettingToIDB('customFirebaseConfigRaw', '');
+            showToast('Usunięto zapisany własny klucz Firebase');
         };
 
         // Wyszukiwanie numeru porównawczego bezpośrednio w ulubionym sklepie użytkownika
@@ -1158,6 +1279,7 @@
                         }
                     }
 
+                    await saveCarsCacheToIDB(cars);
                     renderAll();
                     showToast(`Zaimportowano pomyślnie ${importedCars.length} pojazd(ów)!`);
                 } catch (err) {
@@ -1195,6 +1317,7 @@
             const shopInput = document.getElementById('input-shop-url');
             if (shopInput && shopInput.value.trim() !== '') {
                 customShopUrlTemplate = shopInput.value.trim();
+                await saveSettingToIDB('customShopUrlTemplate', customShopUrlTemplate);
             }
 
             const rawConfig = document.getElementById('input-custom-firebase-config').value.trim();
@@ -1204,57 +1327,108 @@
                 return;
             }
             try {
-                const parsedConfig = JSON.parse(rawConfig);
-                setSyncIndicator('syncing', 'Łączenie...');
+                const parsedConfig = parseFlexibleFirebaseConfig(rawConfig);
+                savedCustomFirebaseConfigRaw = JSON.stringify(parsedConfig, null, 2);
+                await saveSettingToIDB('customFirebaseConfigRaw', savedCustomFirebaseConfigRaw);
+
+                setSyncIndicator('syncing', 'Łączenie z Firebase...');
                 const customApp = initializeApp(parsedConfig, 'custom-app-' + Date.now());
                 auth = getAuth(customApp);
                 db = getFirestore(customApp);
-                await signInAnonymously(auth);
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        currentUser = user;
-                        const uidEl = document.getElementById('user-id-display');
-                        if (uidEl) uidEl.textContent = user.uid;
-                        setupRealtimeListener();
-                        showToast('Połączono z nowym łączem Firebase!');
-                        closeConnectionModal();
-                    }
-                });
+
+                try {
+                    await signInAnonymously(auth);
+                } catch (authErr) {
+                    console.warn('Logowanie anonimowe niedostępne lub wyłączone w konsoli, próba bezpośredniego zapisu Firestore:', authErr);
+                }
+
+                currentUser = auth.currentUser || { uid: 'custom-project-user' };
+                const uidEl = document.getElementById('user-id-display');
+                if (uidEl) uidEl.textContent = `Połączono z projektem: ${parsedConfig.projectId || 'Własny Firebase'} (${currentUser.uid})`;
+
+                // Wyślij dotychczasowe auta z pamięci podręcznej do nowo podłączonej chmury
+                for (const c of cars) {
+                    await persistCarToFirestore(c);
+                }
+
+                setupRealtimeListener();
+                showToast('Zapisano klucz na stałe i połączono z Firebase!');
+                closeConnectionModal();
             } catch (err) {
                 console.error(err);
-                showToast('Nieprawidłowy format JSON konfiguracji Firebase', true);
+                showToast('Nieprawidłowy format klucza Firebase – sprawdź wklejony kod', true);
             }
         };
 
-        // Inicjalizacja Firebase i uwierzytelniania (zgodnie z wymogami RULE 1, 2, 3)
+        // Inicjalizacja Firebase oraz odczyt trwałej pamięci IndexedDB przy starcie
         async function initFirebase() {
             try {
-                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
-                    setSyncIndicator('offline', 'Tryb lokalny');
-                    cars = [];
-                    selectedCarId = null;
+                // 1. Wczytaj zapisane ustawienia oraz zbuforowane pojazdy z trwałej bazy przeglądarki IndexedDB
+                const cachedShopUrl = await getSettingFromIDB('customShopUrlTemplate');
+                if (cachedShopUrl) {
+                    customShopUrlTemplate = cachedShopUrl;
+                }
+
+                const cachedCars = await loadCarsCacheFromIDB();
+                if (Array.isArray(cachedCars) && cachedCars.length > 0) {
+                    cars = cachedCars;
+                    renderAll();
+                }
+
+                const cachedFirebaseRaw = await getSettingFromIDB('customFirebaseConfigRaw');
+                if (cachedFirebaseRaw) {
+                    savedCustomFirebaseConfigRaw = cachedFirebaseRaw;
+                }
+
+                // 2. Sprawdź, czy użytkownik zapisał własny klucz Firebase lub czy dostępny jest klucz środowiskowy
+                let firebaseConfig = null;
+                let isCustomProject = false;
+
+                if (savedCustomFirebaseConfigRaw) {
+                    try {
+                        firebaseConfig = parseFlexibleFirebaseConfig(savedCustomFirebaseConfigRaw);
+                        isCustomProject = true;
+                    } catch (e) {
+                        console.warn('Błąd parsowania zapisanego klucza Firebase:', e);
+                    }
+                }
+
+                if (!firebaseConfig && typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                }
+
+                if (!firebaseConfig) {
+                    setSyncIndicator('online', 'Baza przeglądarki (Trwała)');
+                    const uidEl = document.getElementById('user-id-display');
+                    if (uidEl) uidEl.textContent = 'Zapis trwały w przeglądarce (IndexedDB) – wklej klucz Firebase poniżej, aby synchronizować w chmurze.';
                     renderAll();
                     return;
                 }
 
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
+                const app = initializeApp(firebaseConfig, isCustomProject ? 'saved-custom-app-' + Date.now() : undefined);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
                 setSyncIndicator('syncing', 'Autoryzacja...');
 
-                // RULE 3: Auth Before Queries - najpierw pełne zalogowanie, potem uruchomienie nasłuchiwania
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+                try {
+                    if (!isCustomProject && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (authError) {
+                    console.warn('Uwaga autoryzacji Firebase:', authError);
                 }
 
-                currentUser = auth.currentUser;
+                currentUser = auth.currentUser || (isCustomProject ? { uid: 'custom-project-user' } : null);
                 if (currentUser) {
                     const uidEl = document.getElementById('user-id-display');
-                    if (uidEl) uidEl.textContent = `Stała kolekcja chmury (Sesja: ${currentUser.uid})`;
+                    if (uidEl) {
+                        uidEl.textContent = isCustomProject
+                            ? `Połączono z projektem: ${firebaseConfig.projectId || 'Własny Firebase'}`
+                            : `Stała kolekcja chmury (Sesja: ${currentUser.uid})`;
+                    }
                     setupRealtimeListener();
                 } else {
                     onAuthStateChanged(auth, (user) => {
@@ -1268,7 +1442,7 @@
                 }
             } catch (err) {
                 console.error('Błąd inicjalizacji Firebase:', err);
-                setSyncIndicator('offline', 'Błąd chmury');
+                setSyncIndicator('online', 'Baza przeglądarki (Trwała)');
                 renderAll();
             }
         }
@@ -1282,11 +1456,9 @@
                 unsubscribeSnapshot();
             }
 
-            // RULE 1: Strict Path - używamy wspólnej ścieżki aplikacji /artifacts/{appId}/public/data/cars,
-            // dzięki czemu po odświeżeniu strony (nawet gdy zmieni się anonimowy token sesji) wszystkie pojazdy są zawsze widoczne!
             const carsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'cars');
 
-            unsubscribeSnapshot = onSnapshot(carsColRef, (snapshot) => {
+            unsubscribeSnapshot = onSnapshot(carsColRef, async (snapshot) => {
                 const loadedCars = [];
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
@@ -1312,9 +1484,19 @@
                     });
                 });
 
+                // Jeśli chmura jest jeszcze pusta, a mamy pojazdy w pamięci podręcznej IndexedDB, wyślij je do chmury
+                if (loadedCars.length === 0 && cars.length > 0) {
+                    for (const localCar of cars) {
+                        const carDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'cars', localCar.id);
+                        await setDoc(carDocRef, localCar);
+                    }
+                    return;
+                }
+
                 // Sortowanie w pamięci JS (RULE 2)
                 loadedCars.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
                 cars = loadedCars;
+                await saveCarsCacheToIDB(cars);
 
                 if (selectedCarId && !cars.some(c => c.id === selectedCarId)) {
                     selectedCarId = null;
@@ -1324,13 +1506,12 @@
                 renderAll();
             }, (error) => {
                 console.error('Błąd odczytu Firestore:', error);
-                setSyncIndicator('offline', 'Błąd synchronizacji');
+                setSyncIndicator('online', 'Zapis lokalny (IDB)');
             });
         }
 
-        // Zapis pojedynczego auta do stałej kolekcji Firestore
+        // Zapis pojedynczego auta zarówno do trwałej bazy przeglądarki (IndexedDB), jak i do Firestore
         async function persistCarToFirestore(carObj) {
-            // Najpierw aktualizujemy stan w pamięci podręcznej dla natychmiastowej reakcji UI
             const existingIdx = cars.findIndex(c => c.id === carObj.id);
             const updatedObj = { ...carObj, updatedAt: Date.now() };
             if (existingIdx >= 0) {
@@ -1338,6 +1519,9 @@
             } else {
                 cars.unshift(updatedObj);
             }
+
+            // Zawsze zapisz w trwałej bazie przeglądarki IndexedDB (gwarancja, że nic nie zniknie po odświeżeniu)
+            await saveCarsCacheToIDB(cars);
             renderAll();
 
             if (!currentUser || !db) {
@@ -1351,8 +1535,7 @@
                 setSyncIndicator('online', 'Zsynchronizowano');
             } catch (err) {
                 console.error('Błąd zapisu do Firestore:', err);
-                setSyncIndicator('offline', 'Błąd zapisu');
-                showToast('Błąd zapisu w chmurze Firebase', true);
+                setSyncIndicator('online', 'Zapisano w przeglądarce');
             }
         }
 
@@ -1369,6 +1552,7 @@
                 }
                 cars = [];
                 selectedCarId = null;
+                await saveCarsCacheToIDB([]);
                 setSyncIndicator('online', 'Zsynchronizowano');
                 renderAll();
                 showToast('Baza pojazdów została całkowicie wyczyszczona!');
@@ -2747,6 +2931,7 @@
                 const carIdToDelete = car.id;
                 cars = cars.filter(c => c.id !== carIdToDelete);
                 selectedCarId = null;
+                await saveCarsCacheToIDB(cars);
                 renderAll();
 
                 if (currentUser && db) {

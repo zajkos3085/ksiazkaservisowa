@@ -304,50 +304,6 @@
                                 <div class="text-[11px] uppercase tracking-wider text-slate-400">Ostatni odnotowany przebieg</div>
                                 <div id="detail-car-mileage" class="text-lg sm:text-xl font-mono font-bold text-emerald-400">0 km</div>
                             </div>
-                        </div>
-                        <div class="text-right text-xs text-slate-500">
-                            <div>Wygenerowano z systemu AutoLog</div>
-                            <div id="print-date" class="font-mono mt-1"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- KARTA GŁÓWNA POJAZDU -->
-                <div class="bg-gradient-to-br from-garage-900 via-garage-900 to-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden no-print">
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl pointer-events-none"></div>
-                    
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div class="space-y-1.5">
-                            <div class="flex items-center flex-wrap gap-2.5">
-                                <button onclick="closeCarDetails()" class="px-2.5 py-0.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-md transition flex items-center gap-1.5" title="Zamknij kartę pojazdu">
-                                    <i class="fa-solid fa-arrow-left text-[10px]"></i> Powrót
-                                </button>
-                                <span id="detail-car-badge" class="px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-md">
-                                    Karta Pojazdu
-                                </span>
-                                <span id="detail-car-owner" class="hidden text-xs font-semibold bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
-                                    <i class="fa-solid fa-user text-[10px]"></i> <span id="detail-car-owner-text"></span>
-                                </span>
-                                <span id="detail-car-plate" class="hidden font-mono text-xs bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-0.5 rounded-md"></span>
-                            </div>
-                            <h2 id="detail-car-name" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">BMW F10</h2>
-                            
-                            <!-- Numer VIN z przyciskiem kopiowania -->
-                            <div class="flex items-center space-x-2 pt-1">
-                                <span class="text-xs text-slate-400">VIN:</span>
-                                <code id="detail-car-vin" class="font-mono text-xs sm:text-sm bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-lg text-amber-400 tracking-wider select-all">WBA5C71050D054064</code>
-                                <button onclick="copyVin()" class="p-1.5 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg transition text-xs" title="Skopiuj VIN">
-                                    <i class="fa-regular fa-copy"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Statystyki i przyciski akcji pojazdu -->
-                        <div class="flex flex-wrap sm:flex-col items-start sm:items-end justify-between gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
-                            <div class="bg-slate-950/70 border border-slate-800/90 px-4 py-2 rounded-xl text-left sm:text-right">
-                                <div class="text-[11px] uppercase tracking-wider text-slate-400">Ostatni odnotowany przebieg</div>
-                                <div id="detail-car-mileage" class="text-lg sm:text-xl font-mono font-bold text-emerald-400">340 000 km</div>
-                            </div>
 
                             <div class="flex items-center flex-wrap gap-2">
                                 <button onclick="downloadVehiclePdf()" id="btn-download-pdf" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition flex items-center gap-2 shadow-lg shadow-blue-600/25">
@@ -1288,51 +1244,71 @@
 
                 setSyncIndicator('syncing', 'Autoryzacja...');
 
-                // RULE 3: Auth Before Queries
+                // RULE 3: Auth Before Queries - najpierw pełne zalogowanie, potem uruchomienie nasłuchiwania
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
 
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        currentUser = user;
-                        document.getElementById('user-id-display').textContent = `Użytkownik: ${user.uid}`;
-                        setupRealtimeListener();
-                    }
-                });
+                currentUser = auth.currentUser;
+                if (currentUser) {
+                    const uidEl = document.getElementById('user-id-display');
+                    if (uidEl) uidEl.textContent = `Stała kolekcja chmury (Sesja: ${currentUser.uid})`;
+                    setupRealtimeListener();
+                } else {
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            currentUser = user;
+                            const uidEl = document.getElementById('user-id-display');
+                            if (uidEl) uidEl.textContent = `Stała kolekcja chmury (Sesja: ${user.uid})`;
+                            setupRealtimeListener();
+                        }
+                    });
+                }
             } catch (err) {
                 console.error('Błąd inicjalizacji Firebase:', err);
                 setSyncIndicator('offline', 'Błąd chmury');
-                cars = [];
-                selectedCarId = null;
                 renderAll();
             }
         }
 
-        // Nasłuchiwanie kolekcji samochodów użytkownika w Firestore
+        // Nasłuchiwanie stałej kolekcji samochodów w Firestore (niezależnej od zmiany anonimowego UID po odświeżeniu)
+        let unsubscribeSnapshot = null;
         function setupRealtimeListener() {
             if (!currentUser || !db) return;
 
-            // RULE 1: Strict Path
-            const carsColRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'cars');
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+            }
 
-            onSnapshot(carsColRef, (snapshot) => {
+            // RULE 1: Strict Path - używamy wspólnej ścieżki aplikacji /artifacts/{appId}/public/data/cars,
+            // dzięki czemu po odświeżeniu strony (nawet gdy zmieni się anonimowy token sesji) wszystkie pojazdy są zawsze widoczne!
+            const carsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'cars');
+
+            unsubscribeSnapshot = onSnapshot(carsColRef, (snapshot) => {
                 const loadedCars = [];
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
-                    // Deserializacja tablicy napraw jeśli była zapisana jako string lub tablica
                     let parsedRecords = [];
                     if (Array.isArray(data.records)) {
                         parsedRecords = data.records;
                     } else if (typeof data.records === 'string') {
                         try { parsedRecords = JSON.parse(data.records); } catch (e) { parsedRecords = []; }
                     }
+
+                    let parsedTodos = [];
+                    if (Array.isArray(data.todos)) {
+                        parsedTodos = data.todos;
+                    } else if (typeof data.todos === 'string') {
+                        try { parsedTodos = JSON.parse(data.todos); } catch (e) { parsedTodos = []; }
+                    }
+
                     loadedCars.push({
                         ...data,
                         id: docSnap.id,
-                        records: parsedRecords
+                        records: parsedRecords,
+                        todos: parsedTodos
                     });
                 });
 
@@ -1340,7 +1316,6 @@
                 loadedCars.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
                 cars = loadedCars;
 
-                // Jeśli wybrane wcześniej auto zostało usunięte, odznaczamy wybór
                 if (selectedCarId && !cars.some(c => c.id === selectedCarId)) {
                     selectedCarId = null;
                 }
@@ -1353,19 +1328,32 @@
             });
         }
 
-        // Zapis pojedynczego auta do Firestore
+        // Zapis pojedynczego auta do stałej kolekcji Firestore
         async function persistCarToFirestore(carObj) {
+            // Najpierw aktualizujemy stan w pamięci podręcznej dla natychmiastowej reakcji UI
+            const existingIdx = cars.findIndex(c => c.id === carObj.id);
+            const updatedObj = { ...carObj, updatedAt: Date.now() };
+            if (existingIdx >= 0) {
+                cars[existingIdx] = updatedObj;
+            } else {
+                cars.unshift(updatedObj);
+            }
+            renderAll();
+
             if (!currentUser || !db) {
-                renderAll();
                 return;
             }
-            setSyncIndicator('syncing', 'Zapisywanie...');
-            const carDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cars', carObj.id);
-            await setDoc(carDocRef, {
-                ...carObj,
-                updatedAt: Date.now()
-            });
-            setSyncIndicator('online', 'Zsynchronizowano');
+
+            try {
+                setSyncIndicator('syncing', 'Zapisywanie...');
+                const carDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'cars', carObj.id);
+                await setDoc(carDocRef, updatedObj);
+                setSyncIndicator('online', 'Zsynchronizowano');
+            } catch (err) {
+                console.error('Błąd zapisu do Firestore:', err);
+                setSyncIndicator('offline', 'Błąd zapisu');
+                showToast('Błąd zapisu w chmurze Firebase', true);
+            }
         }
 
         // Całkowite czyszczenie bazy danych ze wszystkich pojazdów
@@ -1374,7 +1362,7 @@
                 setSyncIndicator('syncing', 'Czyszczenie bazy...');
                 if (currentUser && db) {
                     const deletePromises = cars.map(c => {
-                        const carDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cars', c.id);
+                        const carDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'cars', c.id);
                         return deleteDoc(carDocRef);
                     });
                     await Promise.all(deletePromises);
@@ -2756,13 +2744,18 @@
             document.getElementById('confirm-desc').textContent = 'Wszystkie przypisane wpisy serwisowe oraz numery części tego pojazdu zostaną bezpowrotnie usunięte.';
             const btn = document.getElementById('confirm-action-btn');
             btn.onclick = async () => {
+                const carIdToDelete = car.id;
+                cars = cars.filter(c => c.id !== carIdToDelete);
+                selectedCarId = null;
+                renderAll();
+
                 if (currentUser && db) {
-                    const carDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cars', car.id);
-                    await deleteDoc(carDocRef);
-                } else {
-                    cars = cars.filter(c => c.id !== car.id);
-                    selectedCarId = cars[0]?.id || null;
-                    renderAll();
+                    try {
+                        const carDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'cars', carIdToDelete);
+                        await deleteDoc(carDocRef);
+                    } catch (err) {
+                        console.error('Błąd usuwania pojazdu z Firestore:', err);
+                    }
                 }
                 closeConfirmModal();
                 showToast('Pojazd został usunięty');

@@ -2,8 +2,19 @@
 <html lang="pl" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AutoLog - Cyfrowa Książka Serwisowa</title>
+
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AutoLog">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -57,6 +68,19 @@
 
         .m-stripe {
             background: linear-gradient(90deg, #0066b1 0%, #0066b1 33%, #171c54 33%, #171c54 66%, #e22718 66%, #e22718 100%);
+        }
+
+        /* Drag and drop styling */
+        .car-drag-over {
+            border-color: #3b82f6 !important;
+            background-color: rgba(59, 130, 246, 0.15) !important;
+            transform: scale(1.01);
+        }
+        .cursor-grab {
+            cursor: grab;
+        }
+        .cursor-grab:active {
+            cursor: grabbing;
         }
 
         /* Reguły dla wydruku pojedynczego samochodu */
@@ -127,11 +151,44 @@
             </button>
 
             <div class="flex items-center space-x-2 sm:space-x-3">
-                <!-- Przycisk statusu i ustawień połączenia z chmurą (Zsynchronizowano) -->
-                <button onclick="openConnectionModal()" id="sync-status" class="flex items-center space-x-2 text-xs bg-slate-800/90 hover:bg-slate-700 border border-slate-700 hover:border-blue-500/50 px-3 py-2 rounded-xl text-slate-200 transition shadow-sm cursor-pointer" title="Kliknij, aby zarządzać połączeniem i synchronizacją Firebase">
+                <!-- Informacja o zalogowanym użytkowniku -->
+                <div id="user-profile-badge" class="flex items-center gap-2 bg-slate-800/90 border border-slate-700 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs text-slate-200 shadow-sm">
+                    <i id="user-role-icon" class="fa-solid fa-user-shield text-amber-400"></i>
+                    <div class="flex flex-col text-left">
+                        <span id="nav-username" class="font-bold text-white leading-tight max-w-[100px] sm:max-w-[140px] truncate">admin</span>
+                        <span id="nav-user-role" class="text-[10px] text-amber-400 font-mono">Administrator</span>
+                    </div>
+                </div>
+
+                <!-- Przycisk Panelu Administratora (tylko dla admina) -->
+                <button id="btn-admin-panel" onclick="openAdminModal()" class="hidden px-2.5 sm:px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm" title="Panel zarządzania kontami użytkowników i garażami">
+                    <i class="fa-solid fa-users-gear text-amber-400"></i>
+                    <span class="hidden md:inline">Panel Admina</span>
+                </button>
+
+                <!-- Przycisk Instalacji Aplikacji PWA na telefonie / komputerze -->
+                <button id="btn-pwa-install" onclick="installPwaApp()" class="px-2.5 sm:px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-blue-900/30 cursor-pointer" title="Zainstaluj aplikację na telefonie (ekran początkowy)">
+                    <i class="fa-solid fa-mobile-screen text-amber-300"></i>
+                    <span class="hidden md:inline">Zainstaluj</span>
+                </button>
+
+                <!-- Przycisk Zmiany Hasła -->
+                <button onclick="openChangePasswordModal()" class="px-2 sm:px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition flex items-center gap-1.5 shadow-sm" title="Zmień swoje hasło">
+                    <i class="fa-solid fa-key text-blue-400"></i>
+                    <span class="hidden lg:inline">Hasło</span>
+                </button>
+
+                <!-- Przycisk Wylogowania -->
+                <button onclick="logoutUser()" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 text-slate-300 hover:text-red-300 border border-slate-700 hover:border-red-800/50 text-xs font-medium transition flex items-center gap-1.5 shadow-sm" title="Wyloguj się z konta">
+                    <i class="fa-solid fa-right-from-bracket text-red-400"></i>
+                    <span class="hidden sm:inline">Wyloguj</span>
+                </button>
+
+                <!-- Przycisk statusu połączenia z chmurą -->
+                <button onclick="openConnectionModal()" id="sync-status" class="hidden sm:flex items-center space-x-2 text-xs bg-slate-800/90 hover:bg-slate-700 border border-slate-700 hover:border-blue-500/50 px-3 py-2 rounded-xl text-slate-200 transition shadow-sm cursor-pointer" title="Zarządzaj połączeniem i kopiami zapasowymi">
                     <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="sync-dot"></span>
                     <span id="sync-text" class="font-medium">Łączenie...</span>
-                    <i class="fa-solid fa-sliders text-[10px] text-slate-400 ml-1"></i>
+                    <i class="fa-solid fa-cloud text-[10px] text-slate-400 ml-1"></i>
                 </button>
 
                 <!-- Przycisk dodawania nowego auta -->
@@ -143,17 +200,41 @@
         </div>
     </header>
 
+    <!-- Baner dla Administratora podczas przeglądania cudzego garażu -->
+    <div id="admin-viewing-banner" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full no-print">
+        <div class="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+            <div class="flex items-center gap-2.5">
+                <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-eye text-sm"></i>
+                </span>
+                <div>
+                    <span class="font-bold text-white text-sm">Widok Administratora:</span>
+                    <span> Przeglądasz garaż użytkownika: <strong id="admin-viewing-name" class="text-amber-300"></strong> (login: <code id="admin-viewing-login" class="font-mono bg-slate-900 px-1.5 py-0.5 rounded text-amber-400"></code>). Zmiany zostaną zapisane w jego profilu.</span>
+                </div>
+            </div>
+            <button onclick="returnToMyGarage()" class="shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-arrow-rotate-left"></i> Wróć do mojego garażu
+            </button>
+        </div>
+    </div>
+
     <!-- Główny kontener aplikacji -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 print-container">
         
         <!-- LEWA KOLUMNA: Lista pojazdów (Garaż) -->
         <aside class="lg:col-span-4 xl:col-span-3 space-y-4 no-print">
             <div class="bg-garage-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center justify-between mb-2">
                     <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                        <i class="fa-solid fa-warehouse text-blue-400"></i> Twój Garaż
+                        <i class="fa-solid fa-warehouse text-blue-400"></i> <span id="sidebar-garage-title">Twój Garaż</span>
                     </h2>
                     <span id="cars-count" class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md">0</span>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-slate-400 mb-3 bg-slate-950/60 px-2.5 py-1.5 rounded-xl border border-slate-800/80">
+                    <span class="flex items-center gap-1.5 text-slate-400">
+                        <i class="fa-solid fa-up-down text-blue-400"></i> Poukładaj: strzałki ▲▼ lub złap i przeciągnij
+                    </span>
                 </div>
 
                 <!-- Wyszukiwarka samochodów w garażu -->
@@ -162,7 +243,7 @@
                     <input type="text" id="search-car-input" oninput="renderCarsSidebar()" placeholder="Szukaj (auto, właściciel, VIN)..." class="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition">
                 </div>
 
-                <!-- Lista kart pojazdów (mobilnie przewijana poziomo lub pionowo) -->
+                <!-- Lista kart pojazdów (poukładana trwale bez zmian pozycji przy zapisie) -->
                 <div id="cars-list" class="space-y-2.5">
                     <!-- Stan ładowania -->
                     <div class="animate-pulse space-y-2">
@@ -174,16 +255,16 @@
                 <!-- Szybki Eksport / Import kopii zapasowej JSON -->
                 <div class="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
                     <div class="flex items-center gap-2">
-                        <button onclick="exportDatabaseJson()" class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5" title="Pobierz kopię zapasową wszystkich aut do pliku JSON">
-                            <i class="fa-solid fa-download text-blue-400"></i> Eksportuj bazę
+                        <button onclick="exportDatabaseJson()" class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5" title="Pobierz kopię zapasową aut tego garażu do pliku JSON">
+                            <i class="fa-solid fa-download text-blue-400"></i> Eksportuj
                         </button>
-                        <label class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5 cursor-pointer" title="Wczytaj bazę pojazdów z pliku JSON">
+                        <label class="flex-1 py-2 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-[11px] font-medium text-slate-300 transition flex items-center justify-center gap-1.5 cursor-pointer" title="Wczytaj auta z pliku JSON do tego garażu">
                             <i class="fa-solid fa-upload text-emerald-400"></i> Importuj
                             <input type="file" id="import-json-input" accept=".json,application/json" onchange="importDatabaseJson(event)" class="hidden">
                         </label>
                     </div>
-                    <button onclick="confirmClearAllCars()" class="w-full py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-[11px] font-semibold text-red-300 transition flex items-center justify-center gap-2" title="Usuń wszystkie pojazdy z bazy danych">
-                        <i class="fa-solid fa-trash-can text-red-400"></i> Wyczyść całą bazę pojazdów
+                    <button onclick="confirmClearAllCars()" class="w-full py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-[11px] font-semibold text-red-300 transition flex items-center justify-center gap-2" title="Wyczyść pojazdy z tego garażu">
+                        <i class="fa-solid fa-trash-can text-red-400"></i> Wyczyść ten garaż
                     </button>
                 </div>
             </div>
@@ -207,7 +288,7 @@
                                     <h3 class="text-base font-bold text-white">Przypomnienia o przeglądach i serwisach</h3>
                                     <span id="reminders-badge-count" class="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">0</span>
                                 </div>
-                                <p class="text-xs text-slate-400">Automatyczny alert na 14 dni przed upływem roku (wyliczany wyłącznie z najnowszego przeglądu / serwisu danego auta)</p>
+                                <p class="text-xs text-slate-400">Automatyczny alert na 14 dni przed upływem roku (wyliczany z najnowszego przeglądu / serwisu pojazdu)</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 self-start sm:self-auto">
@@ -492,15 +573,15 @@
                     </div>
                 </div>
 
-                <!-- SEKCJA HISTORII SERWISOWEJ I NAPRAW -->
+                <!-- SEKCJA HISTORII SERWISOWEJ I NAPRAW (WSPÓLNA CHRONOLOGICZNA OŚ CZASU) -->
                 <div class="bg-garage-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl print-card">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
                         <div>
                             <h3 class="text-base font-bold text-white print-text-dark flex items-center gap-2">
                                 <i class="fa-solid fa-book-medical text-emerald-400 no-print"></i>
-                                <span>Historia Serwisowa i Naprawy</span>
+                                <span>Wspólna Historia Serwisowa i Przeglądy</span>
                             </h3>
-                            <p class="text-xs text-slate-400 print-text-muted">Pełny rejestr wymian oleju, przeglądów i napraw mechanicznych</p>
+                            <p class="text-xs text-slate-400 print-text-muted">Wszystkie wpisy ułożone razem chronologicznie (serwisy olejowe, naprawy i badania techniczne)</p>
                         </div>
 
                         <div class="flex flex-wrap items-center gap-2 no-print">
@@ -515,16 +596,22 @@
 
                             <!-- Filtr kategorii wpisów -->
                             <select id="filter-record-type" onchange="renderRecords()" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500">
-                                <option value="ALL">Wszystkie wpisy</option>
+                                <option value="ALL">Wszystkie wpisy (wspólnie chronologicznie)</option>
                                 <option value="OIL">Serwis olejowy / filtry</option>
+                                <option value="INSPECTION">Przeglądy okresowe / badania</option>
                                 <option value="REPAIR">Naprawy mechaniczne</option>
-                                <option value="INSPECTION">Przeglądy / Inne</option>
                             </select>
 
-                            <!-- Przycisk dodawania nowej naprawy / wymiany oleju -->
+                            <!-- Przełącznik kierunku sortowania chronologicznego -->
+                            <button type="button" onclick="toggleRecordsSortOrder()" id="btn-toggle-sort" class="bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 transition flex items-center gap-1.5 shadow-sm" title="Zmień kierunek sortowania chronologicznego">
+                                <i id="sort-order-icon" class="fa-solid fa-arrow-down-wide-short text-blue-400"></i>
+                                <span id="sort-order-label">Najnowsze na górze</span>
+                            </button>
+
+                            <!-- Przycisk dodawania nowej naprawy / wymiany oleju / przeglądu -->
                             <button onclick="openRecordModal()" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center gap-1.5">
                                 <i class="fa-solid fa-plus"></i>
-                                <span>Dodaj wpis / naprawę</span>
+                                <span>Dodaj wpis</span>
                             </button>
                         </div>
                     </div>
@@ -532,12 +619,12 @@
                     <!-- Podsumowanie kosztów i liczby wpisów -->
                     <div class="grid grid-cols-3 gap-3 my-4 no-print">
                         <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
-                            <div class="text-[11px] text-slate-400">Wszystkich wpisów</div>
-                            <div id="stat-records-count" class="text-base sm:text-lg font-bold font-mono text-white">2</div>
+                            <div class="text-[11px] text-slate-400">Łącznie wpisów</div>
+                            <div id="stat-records-count" class="text-base sm:text-lg font-bold font-mono text-white">0</div>
                         </div>
                         <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
                             <div class="text-[11px] text-slate-400">Ostatnia wymiana oleju</div>
-                            <div id="stat-last-oil" class="text-xs sm:text-sm font-bold font-mono text-amber-400 truncate">06.2026 (340kkm)</div>
+                            <div id="stat-last-oil" class="text-xs sm:text-sm font-bold font-mono text-amber-400 truncate">Brak wpisów</div>
                         </div>
                         <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
                             <div class="text-[11px] text-slate-400">Suma wpisanych kosztów</div>
@@ -545,7 +632,7 @@
                         </div>
                     </div>
 
-                    <!-- Oś czasu / Lista wpisów serwisowych -->
+                    <!-- Oś czasu / Lista wpisów serwisowych i przeglądów razem -->
                     <div id="records-list" class="space-y-3 mt-4">
                         <!-- Wpisy generowane przez JS -->
                     </div>
@@ -554,6 +641,227 @@
             </div>
         </section>
     </main>
+
+    <!-- MODAL LOGOWANIA (WYŚWIETLANY GDY BRAK AKTYWNEJ SESJI) -->
+    <div id="login-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-garage-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-48 h-48 bg-blue-600/10 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-900/50">
+                    <i class="fa-solid fa-car-wrench text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold text-white tracking-tight">AutoLog</h2>
+                <p class="text-xs text-slate-400 mt-1">Cyfrowa Książka Serwisowa • Logowanie do systemu</p>
+            </div>
+
+            <!-- Komunikat błędu logowania -->
+            <div id="login-error-msg" class="hidden mb-4 p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation shrink-0 text-sm"></i>
+                <span id="login-error-text">Nieprawidłowy login lub hasło.</span>
+            </div>
+
+            <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Nazwa użytkownika (Login)</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input type="text" id="login-username" required placeholder="Wpisz login..." autocomplete="username" class="w-full bg-slate-950 border border-slate-700 focus:border-blue-500 text-white text-sm rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Hasło</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input type="password" id="login-password" required placeholder="Wpisz hasło..." autocomplete="current-password" class="w-full bg-slate-950 border border-slate-700 focus:border-blue-500 text-white text-sm rounded-xl pl-9 pr-10 py-2.5 focus:outline-none transition">
+                        <button type="button" onclick="togglePasswordVisibility('login-password', 'login-pwd-toggle-icon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs p-1" title="Pokaż/ukryj hasło">
+                            <i id="login-pwd-toggle-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs text-slate-400 pt-1">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="login-remember-me" checked class="w-4 h-4 rounded accent-blue-600 bg-slate-900 border-slate-700">
+                        <span>Zapamiętaj mnie na tym urządzeniu</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-sm shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-right-to-bracket"></i> Zaloguj się
+                </button>
+            </form>
+
+            <!-- Podpowiedź domyślnego konta admina -->
+            <div class="mt-6 p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-xs text-slate-400 space-y-1">
+                <div class="font-bold text-amber-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-halved"></i> Domyślne konto administratora:
+                </div>
+                <div class="text-[11px] text-slate-300">
+                    Login: <code class="font-mono bg-slate-900 px-1.5 py-0.5 rounded text-white font-bold select-all">admin</code> • Hasło: <code class="font-mono bg-slate-900 px-1.5 py-0.5 rounded text-white font-bold select-all">admin123</code>
+                </div>
+                <div class="text-[10px] text-slate-400 leading-tight">
+                    Po zalogowaniu jako administrator możesz tworzyć osobne konta dla innych użytkowników, zarządzać ich garażami i resetować hasła.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PANELU ADMINISTRATORA (ZARZĄDZANIE KONTAMI I GARAŻAMI) -->
+    <div id="admin-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl my-8">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                        <i class="fa-solid fa-users-gear text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Panel Administratora</h3>
+                        <p class="text-[11px] text-slate-400">Zarządzanie kontami użytkowników, rolami oraz garażami</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeAdminModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Zakładki: Lista użytkowników / Dodaj konto -->
+            <div class="flex items-center gap-2 mt-4 border-b border-slate-800 pb-2">
+                <button type="button" id="admin-tab-users-btn" onclick="switchAdminTab('users')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-users text-[11px]"></i> Konta i Garaże (<span id="admin-users-count">0</span>)
+                </button>
+                <button type="button" id="admin-tab-add-btn" onclick="switchAdminTab('add')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-plus text-[11px]"></i> Utwórz nowe konto
+                </button>
+            </div>
+
+            <!-- ZAKŁADKA 1: LISTA UŻYTKOWNIKÓW -->
+            <div id="admin-tab-users-content" class="mt-4 space-y-3">
+                <div id="admin-users-list" class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                    <!-- Generowane dynamicznie w JS -->
+                </div>
+            </div>
+
+            <!-- ZAKŁADKA 2: DODAWANIE NOWEGO UŻYTKOWNIKA -->
+            <div id="admin-tab-add-content" class="mt-4 hidden">
+                <form onsubmit="handleAdminCreateUser(event)" class="space-y-3.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Login (Nazwa konta) *</label>
+                            <input type="text" id="new-user-username" required placeholder="np. tomasz, mechanik1" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500">
+                            <span class="text-[10px] text-slate-500">Unikalna nazwa do logowania (bez spacji).</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Hasło początkowe *</label>
+                            <input type="text" id="new-user-password" required placeholder="np. haslo123" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Imię / Nazwisko / Właściciel garażu</label>
+                            <input type="text" id="new-user-name" placeholder="np. Tomasz Kowalski" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Rola w systemie *</label>
+                            <select id="new-user-role" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500">
+                                <option value="user">Użytkownik (Własny niezależny garaż)</option>
+                                <option value="admin">Administrator (Dostęp do panelu admina)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-[11px] text-slate-400">
+                        Każde utworzone konto otrzymuje swój <strong>osobny, odizolowany garaż</strong>. Nowy użytkownik po zalogowaniu widzi tylko swoje pojazdy i wpisy.
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Utwórz konto użytkownika
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800 flex justify-end">
+                <button type="button" onclick="closeAdminModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+                    Zamknij panel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ZMIANY HASŁA DLA ZALOGOWANEGO UŻYTKOWNIKA -->
+    <div id="change-password-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-blue-400"></i> Zmień swoje hasło
+                </h3>
+                <button type="button" onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleChangePasswordSubmit(event)" class="mt-4 space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Aktualne hasło *</label>
+                    <input type="password" id="input-old-pwd" required placeholder="Wpisz dotychczasowe hasło" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nowe hasło *</label>
+                    <input type="password" id="input-new-pwd" required placeholder="Wpisz nowe hasło (min. 4 znaki)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Powtórz nowe hasło *</label>
+                    <input type="password" id="input-new-pwd-confirm" required placeholder="Powtórz nowe hasło" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+                        Anuluj
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 transition">
+                        Zapisz nowe hasło
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL RESETU HASŁA DLA ADMINA -->
+    <div id="admin-reset-pwd-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-lock-open text-amber-400"></i> Zresetuj hasło użytkownika
+                </h3>
+                <button type="button" onclick="closeAdminResetPwdModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleAdminResetPwdSubmit(event)" class="mt-4 space-y-3.5">
+                <div class="text-xs text-slate-300">
+                    Ustawiasz nowe hasło dla konta: <strong id="admin-reset-target-user" class="text-amber-400 font-mono"></strong>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nowe hasło dla tego konta *</label>
+                    <input type="text" id="admin-reset-new-pwd" required placeholder="Wpisz nowe hasło" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeAdminResetPwdModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+                        Anuluj
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-600/30 transition">
+                        Zapisz hasło
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- MODAL: DODAWANIE / EDYCJA POJAZDU ORAZ NUMERÓW PORÓWNAWCZYCH FILTRÓW -->
     <div id="car-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto no-print">
@@ -640,12 +948,12 @@
         </div>
     </div>
 
-    <!-- MODAL: DODAWANIE / EDYCJA WPISU SERWISOWEGO LUB NAPRAWY -->
+    <!-- MODAL: DODAWANIE / EDYCJA WPISU SERWISOWEGO LUB PRZEGLĄDU -->
     <div id="record-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto no-print">
         <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl my-8">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800">
                 <h3 id="record-modal-title" class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-screwdriver-wrench text-emerald-400"></i> Wpis Serwisowy / Naprawa
+                    <i class="fa-solid fa-screwdriver-wrench text-emerald-400"></i> Wpis Serwisowy / Przegląd
                 </h3>
                 <button onclick="closeRecordModal()" class="text-slate-400 hover:text-white p-1">
                     <i class="fa-solid fa-xmark text-lg"></i>
@@ -675,17 +983,17 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tytuł / Nazwa czynności *</label>
-                        <input type="text" id="input-record-title" required placeholder="np. Wymiana oleju / Wymiana klocków" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+                        <input type="text" id="input-record-title" required placeholder="np. Wymiana oleju / Badanie okresowe / Klocki" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Data (np. 06.2026 lub 12.06.2026) *</label>
-                        <input type="text" id="input-record-date" required placeholder="06.2026" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-blue-500">
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Data (np. 15.06.2026 lub 06.2026) *</label>
+                        <input type="text" id="input-record-date" required placeholder="np. 15.06.2026" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Przebieg podczas naprawy (km lub np. 340kkm) *</label>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Przebieg podczas naprawy/przeglądu (km lub np. 340kkm) *</label>
                         <input type="text" id="input-record-mileage" required placeholder="340000 lub 340kkm" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-amber-400 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
@@ -708,28 +1016,28 @@
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <label class="cursor-pointer bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center space-x-3 transition">
-                            <input type="checkbox" id="chk-filter-oil" onchange="syncFilterCheckboxesToParts()" class="w-4 h-4 rounded accent-emerald-600 bg-slate-900 border-slate-700">
+                            <input type="checkbox" id="chk-filter-oil" class="w-4 h-4 rounded accent-emerald-600 bg-slate-900 border-slate-700">
                             <div>
                                 <div class="text-xs font-bold text-slate-200">Filtr oleju</div>
                                 <div id="chk-label-oil" class="text-[11px] font-mono text-slate-400"></div>
                             </div>
                         </label>
                         <label class="cursor-pointer bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center space-x-3 transition">
-                            <input type="checkbox" id="chk-filter-air" onchange="syncFilterCheckboxesToParts()" class="w-4 h-4 rounded accent-emerald-600 bg-slate-900 border-slate-700">
+                            <input type="checkbox" id="chk-filter-air" class="w-4 h-4 rounded accent-emerald-600 bg-slate-900 border-slate-700">
                             <div>
                                 <div class="text-xs font-bold text-slate-200">Filtr powietrza</div>
                                 <div id="chk-label-air" class="text-[11px] font-mono text-slate-400"></div>
                             </div>
                         </label>
                         <label class="cursor-pointer bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center space-x-3 transition">
-                            <input type="checkbox" id="chk-filter-cabin" onchange="syncFilterCheckboxesToParts()" class="w-4 h-4 rounded accent-emerald-600 bg-slate-900 border-slate-700">
+                            <input type="checkbox" id="chk-filter-cabin" class="w-4 h-4 rounded accent-emerald-600 bg-slate-900 border-slate-700">
                             <div>
                                 <div class="text-xs font-bold text-slate-200">Filtr kabinowy</div>
                                 <div id="chk-label-cabin" class="text-[11px] font-mono text-slate-400"></div>
                             </div>
                         </label>
                         <label class="cursor-pointer bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center space-x-3 transition">
-                            <input type="checkbox" id="chk-filter-fuel" onchange="syncFilterCheckboxesToParts()" class="w-4 h-4 rounded accent-emerald-600 bg-slate-900 border-slate-700">
+                            <input type="checkbox" id="chk-filter-fuel" class="w-4 h-4 rounded accent-emerald-600 bg-slate-900 border-slate-700">
                             <div>
                                 <div class="text-xs font-bold text-slate-200">Filtr paliwa</div>
                                 <div id="chk-label-fuel" class="text-[11px] font-mono text-slate-400"></div>
@@ -738,7 +1046,7 @@
                     </div>
                 </div>
 
-                <!-- Powiększona rubryka "Użyte części / zamontowane zamienniki" -->
+                <!-- Użyte części / zamontowane zamienniki -->
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">
                         <i class="fa-solid fa-boxes-stacked mr-1 text-blue-400"></i> Użyte części / zamontowane zamienniki (producent, olej, klocki itp.)
@@ -747,8 +1055,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Dodatkowa notatka / opis naprawy</label>
-                    <textarea id="input-record-desc" rows="2" placeholder="Uwagi z warsztatu, wykonane prace..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"></textarea>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Dodatkowa notatka / opis naprawy lub przeglądu</label>
+                    <textarea id="input-record-desc" rows="2" placeholder="Uwagi ze stacji diagnostycznej / warsztatu, wykonane prace..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"></textarea>
                 </div>
 
                 <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
@@ -792,12 +1100,12 @@
         </div>
     </div>
 
-    <!-- MODAL USTAWIEŃ POŁĄCZENIA I SYNCHRONIZACJI FIREBASE -->
+    <!-- MODAL USTAWIEŃ SYNCHRONIZACJI CHMURY (KLUCZ WBUDOWANY I NIEWIDOCZNY) -->
     <div id="connection-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto no-print">
         <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800">
                 <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-bolt text-blue-400"></i> Ustawienia Łącza i Synchronizacji
+                    <i class="fa-solid fa-cloud text-blue-400"></i> Synchronizacja Chmury i Ustawienia
                 </h3>
                 <button onclick="closeConnectionModal()" class="text-slate-400 hover:text-white p-1">
                     <i class="fa-solid fa-xmark text-lg"></i>
@@ -805,66 +1113,57 @@
             </div>
 
             <div class="mt-4 space-y-4 text-xs">
-                <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
-                    <div>
-                        <div class="text-slate-400 text-[11px]">Aktualny status połączenia</div>
-                        <div id="modal-sync-status-text" class="font-bold text-sm text-emerald-400 mt-0.5">Zsynchronizowano z Firebase</div>
+                <!-- Status połączenia z chmurą ksiazkaservisowa -->
+                <div class="bg-slate-950/90 border border-emerald-500/40 rounded-xl p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg shrink-0">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <div>
+                            <div class="text-slate-400 text-[11px]">Chmura AutoLog Firebase</div>
+                            <div id="modal-sync-status-text" class="font-bold text-sm text-emerald-400 mt-0.5">Połączono z projektem ksiazkaservisowa</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5">Automatyczna synchronizacja ze wszystkimi urządzeniami</div>
+                        </div>
                     </div>
-                    <button onclick="forceManualSync()" class="px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-semibold transition flex items-center gap-1.5">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="forceManualSync()" class="w-full py-2.5 px-3 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 font-semibold transition flex items-center justify-center gap-2">
                         <i class="fa-solid fa-rotate"></i> Synchronizuj teraz
                     </button>
                 </div>
 
-                <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-1.5">
-                    <div class="text-slate-400 text-[11px] uppercase font-semibold">Identyfikator sesji chmury (UID)</div>
-                    <div id="user-id-display" class="font-mono text-xs text-slate-200 break-all select-all">Ładowanie...</div>
-                </div>
-
-                <!-- Konfiguracja linku do ulubionego sklepu motoryzacyjnego -->
+                <!-- Konfiguracja linku do sklepu motoryzacyjnego -->
                 <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
                     <label class="block text-xs font-semibold uppercase text-blue-400">
                         <i class="fa-solid fa-cart-shopping mr-1"></i> Twój sklep motoryzacyjny (WebTerminal M-MOT)
                     </label>
                     <input type="text" id="input-shop-url" placeholder="https://webterminal.m-mot.pl/search/v2/product?searchOption=-1&frg={NR}&closelyMatching=false" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500">
                     <p class="text-[11px] text-slate-400 leading-relaxed">
-                        Domyślnie skonfigurowano Twoją hurtownię <strong class="text-slate-200">M-MOT WebTerminal</strong>. W miejsce <code class="text-amber-400">{NR}</code> aplikacja automatycznie podstawia numer klikniętego filtra z kafelka.
+                        W miejsce <code class="text-amber-400">{NR}</code> aplikacja automatycznie podstawia numer klikniętego filtra z kafelka.
                     </p>
                 </div>
 
                 <!-- Kopia zapasowa Eksport / Import JSON -->
                 <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
                     <div class="text-xs font-semibold uppercase text-emerald-400">
-                        <i class="fa-solid fa-database mr-1"></i> Kopia Zapasowa Danych (Eksport / Import pliku)
+                        <i class="fa-solid fa-database mr-1"></i> Dodatkowa Kopia Zapasowa (Plik .JSON)
                     </div>
                     <div class="flex items-center gap-2">
                         <button type="button" onclick="exportDatabaseJson()" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold transition flex items-center justify-center gap-1.5">
-                            <i class="fa-solid fa-download text-blue-400"></i> Pobierz plik .JSON
+                            <i class="fa-solid fa-download text-blue-400"></i> Pobierz .JSON
                         </button>
                         <label class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-upload text-emerald-400"></i> Wgraj plik .JSON
+                            <i class="fa-solid fa-upload text-emerald-400"></i> Wgraj .JSON
                             <input type="file" accept=".json,application/json" onchange="importDatabaseJson(event)" class="hidden">
                         </label>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Własna konfiguracja łącza Firebase (JSON lub kod firebaseConfig)</label>
-                    <textarea id="input-custom-firebase-config" rows="4" placeholder='Wklej obiekt z konsoli Firebase, np. {"apiKey": "...", "projectId": "..."}' class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
-                    <p class="text-[11px] text-slate-400 mt-1">Wklejony klucz jest trwale zapamiętywany w bazie przeglądarki (IndexedDB) i nie znika po odświeżeniu strony.</p>
-                </div>
-
-                <div class="flex items-center justify-between pt-3 border-t border-slate-800">
-                    <button type="button" onclick="clearSavedFirebaseConfig()" class="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 font-semibold transition text-[11px]">
-                        Usuń zapisany klucz
+                <div class="flex items-center justify-end pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeConnectionModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition">
+                        Zamknij
                     </button>
-                    <div class="flex items-center space-x-2">
-                        <button type="button" onclick="closeConnectionModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition">
-                            Zamknij
-                        </button>
-                        <button type="button" onclick="applyCustomFirebaseConnection()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition">
-                            Zapisz i połącz
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -883,7 +1182,7 @@
             </div>
             <form onsubmit="saveRescheduledReminder(event)" class="mt-4 space-y-4">
                 <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs">
-                    <div id="reschedule-car-label" class="font-bold text-white text-sm">BMW F10</div>
+                    <div id="reschedule-car-label" class="font-bold text-white text-sm">Pojazd</div>
                     <div id="reschedule-current-due" class="text-slate-400 mt-0.5">Obecny termin: -</div>
                 </div>
 
@@ -918,7 +1217,7 @@
         </div>
     </div>
 
-    <!-- MODAL POTWIEDZENIA USUNIĘCIA -->
+    <!-- MODAL POTWIEDZENIA AKCJI / USUNIĘCIA -->
     <div id="confirm-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4 no-print">
         <div class="bg-garage-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl text-center space-y-4">
             <div class="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center mx-auto text-xl">
@@ -951,31 +1250,93 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Stan aplikacji w pamięci
+        // ============================================================================
+        // WBUDOWANA AUTOMATYCZNA KONFIGURACJA CHMURY FIREBASE (ksiazkaservisowa)
+        // Łączy się automatycznie na każdym urządzeniu (telefon, komputer, tablet)
+        // ============================================================================
+        const BUILTIN_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyD1G_tfn73fagPW8YJ4DpUUrhvmw1sHcm4",
+            authDomain: "ksiazkaservisowa.firebaseapp.com",
+            projectId: "ksiazkaservisowa",
+            storageBucket: "ksiazkaservisowa.firebasestorage.app",
+            messagingSenderId: "848790516228",
+            appId: "1:848790516228:web:c9cb1592f67f9e5918fb51"
+        };
+
+        // ============================================================================
+        // STAN APLIKACJI W PAMIĘCI
+        // ============================================================================
         let db = null;
         let auth = null;
-        let currentUser = null;
-        let cars = [];
+        let firebaseCurrentUser = null;
+
+        // System Kont i Użytkowników
+        let currentAuthUser = null;     // Zalogowany użytkownik: { id, username, name, role }
+        let viewingUserId = null;       // Id użytkownika, którego garaż obecnie oglądamy (null = własny garaż)
+        let allCachedCars = [];         // Wszystkie samochody w bazie (z podziałem na userId)
+        let cars = [];                  // Samochody należące do aktywnego garażu (posortowane wg car.order)
+
         let selectedCarId = null;
         let isEditingCar = false;
         let editingRecordId = null;
         let showAllUpcomingReminders = false;
         let activeRescheduleContext = null;
-        let customShopUrlTemplate = 'https://webterminal.m-mot.pl/search/v2/product?searchOption=-1&frg={NR}&closelyMatching=false';
-        let savedCustomFirebaseConfigRaw = '';
+        let recordsSortOrder = 'DESC';  // 'DESC' (najnowsze pierwsze) lub 'ASC' (najstarsze pierwsze)
+        let draggedCarId = null;
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'autolog-service-book';
+        let customShopUrlTemplate = 'https://webterminal.m-mot.pl/search/v2/product?searchOption=-1&frg={NR}&closelyMatching=false';
 
         // ============================================================================
-        // TRWAŁA BAZA PRZEGLĄDARKI (IndexedDB) - Zapobiega znikaniu klucza i aut po F5
+        // PROGRESSIVE WEB APP (PWA) - SERVICE WORKER I INSTALACJA
+        // ============================================================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then((reg) => {
+                    console.log('AutoLog PWA Service Worker aktywny');
+                }).catch((err) => {
+                    console.warn('Info Service Worker:', err);
+                });
+            });
+        }
+
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('btn-pwa-install');
+            if (btn) btn.classList.remove('hidden');
+        });
+
+        window.installPwaApp = async function() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    showToast('Aplikacja została pomyślnie dodana do ekranu głównego!');
+                }
+                deferredPrompt = null;
+                const btn = document.getElementById('btn-pwa-install');
+                if (btn) btn.classList.add('hidden');
+            } else {
+                const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                if (isIos) {
+                    showToast('Aby zainstalować na iPhone: kliknij ikonę "Udostępnij" u dołu Safari i wybierz "Do ekranu początkowego"', false);
+                } else {
+                    showToast('Aplikację możesz zainstalować z menu przeglądarki (Dodaj do ekranu głównego / Zainstaluj aplikację)');
+                }
+            }
+        };
+
+        // ============================================================================
+        // TRWAŁA BAZA PRZEGLĄDARKI (IndexedDB) - Wersja 2
         // ============================================================================
         const IDB_NAME = 'AutoLog_Persistent_DB';
-        const IDB_VERSION = 1;
+        const IDB_VERSION = 2;
 
         function openIndexedDB() {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 if (!window.indexedDB) {
                     resolve(null);
                     return;
@@ -988,6 +1349,10 @@
                     }
                     if (!idb.objectStoreNames.contains('cars_cache')) {
                         idb.createObjectStore('cars_cache', { keyPath: 'id' });
+                    }
+                    if (!idb.objectStoreNames.contains('users')) {
+                        const userStore = idb.createObjectStore('users', { keyPath: 'id' });
+                        userStore.createIndex('username', 'username', { unique: true });
                     }
                 };
                 req.onsuccess = (e) => resolve(e.target.result);
@@ -1040,61 +1405,730 @@
                 const req = tx.objectStore('cars_cache').getAll();
                 req.onsuccess = () => {
                     const list = Array.isArray(req.result) ? req.result : [];
-                    list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
                     resolve(list);
                 };
                 req.onerror = () => resolve([]);
             });
         }
 
-        // Elastyczny parser konfiguracji Firebase (obsługuje czysty JSON oraz kod JS skopiowany z konsoli Firebase)
-        function parseFlexibleFirebaseConfig(rawText) {
-            if (!rawText || !rawText.trim()) return null;
-            let text = rawText.trim();
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                // Wyciągnij zawartość między pierwszym { a ostatnim }
-                const firstBrace = text.indexOf('{');
-                const lastBrace = text.lastIndexOf('}');
-                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-                    let objStr = text.slice(firstBrace, lastBrace + 1);
-                    // Zamień klucze bez cudzysłowów (np. apiKey: "...") na poprawny JSON ("apiKey": "...")
-                    objStr = objStr
-                        .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":')
-                        .replace(/'/g, '"')
-                        .replace(/,\s*}/g, '}');
-                    return JSON.parse(objStr);
+        // ============================================================================
+        // OBSŁUGA KONT UŻYTKOWNIKÓW W IndexedDB
+        // ============================================================================
+        async function getAllUsersFromIDB() {
+            const idb = await openIndexedDB();
+            if (!idb) return [];
+            return new Promise((resolve) => {
+                const tx = idb.transaction('users', 'readonly');
+                const req = tx.objectStore('users').getAll();
+                req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
+                req.onerror = () => resolve([]);
+            });
+        }
+
+        async function getUserFromIDB(userId) {
+            const idb = await openIndexedDB();
+            if (!idb) return null;
+            return new Promise((resolve) => {
+                const tx = idb.transaction('users', 'readonly');
+                const req = tx.objectStore('users').get(userId);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = () => resolve(null);
+            });
+        }
+
+        async function getUserByUsernameFromIDB(username) {
+            const users = await getAllUsersFromIDB();
+            const lower = (username || '').toLowerCase().trim();
+            return users.find(u => (u.username || '').toLowerCase() === lower) || null;
+        }
+
+        async function saveUserToIDB(userObj) {
+            const idb = await openIndexedDB();
+            if (!idb) return false;
+            return new Promise((resolve) => {
+                const tx = idb.transaction('users', 'readwrite');
+                tx.objectStore('users').put(userObj);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        }
+
+        async function deleteUserFromIDB(userId) {
+            const idb = await openIndexedDB();
+            if (!idb) return false;
+            return new Promise((resolve) => {
+                const tx = idb.transaction('users', 'readwrite');
+                tx.objectStore('users').delete(userId);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        }
+
+        // Haszowanie haseł za pomocą wbudowanego Web Crypto API (SHA-256)
+        async function hashPassword(str) {
+            const enc = new TextEncoder().encode(str);
+            const buf = await crypto.subtle.digest('SHA-256', enc);
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Inicjalizacja domyślnego konta administratora oraz migracja starych aut
+        async function initUsersAndMigration() {
+            const users = await getAllUsersFromIDB();
+            let adminUser = users.find(u => u.username === 'admin');
+
+            if (!adminUser) {
+                adminUser = {
+                    id: 'usr-admin',
+                    username: 'admin',
+                    passwordHash: await hashPassword('admin123'),
+                    name: 'Główny Administrator',
+                    role: 'admin',
+                    createdAt: Date.now()
+                };
+                await saveUserToIDB(adminUser);
+            }
+
+            // Migracja istniejących aut w pamięci podręcznej (przypisanie do admina i nadanie 'order')
+            const cachedCars = await loadCarsCacheFromIDB();
+            let modified = false;
+
+            cachedCars.forEach((car, index) => {
+                if (!car.userId) {
+                    car.userId = adminUser.id;
+                    modified = true;
                 }
-                throw e;
+                if (typeof car.order !== 'number') {
+                    car.order = index;
+                    modified = true;
+                }
+            });
+
+            if (modified) {
+                await saveCarsCacheToIDB(cachedCars);
+            }
+            allCachedCars = cachedCars;
+        }
+
+        // ============================================================================
+        // LOGOWANIE, SESJA I WIDOK GARAŻU
+        // ============================================================================
+        function getActiveGarageUserId() {
+            if (viewingUserId) return viewingUserId;
+            return currentAuthUser ? currentAuthUser.id : 'usr-admin';
+        }
+
+        function loadActiveGarageCars() {
+            const activeId = getActiveGarageUserId();
+            cars = allCachedCars.filter(c => c.userId === activeId);
+            // Sortowanie aut STRICTLY wg kolejności (order), a w razie remisu wg daty utworzenia
+            cars.sort((a, b) => (a.order ?? 999999) - (b.order ?? 999999) || (a.createdAt || 0) - (b.createdAt || 0));
+
+            // Jeśli wybrane auto nie należy do aktywnego garażu, odznacz
+            if (selectedCarId && !cars.some(c => c.id === selectedCarId)) {
+                selectedCarId = null;
             }
         }
 
-        // Parsowanie daty wpisu (obsługuje DD.MM.RRRR, MM.RRRR, RRRR-MM-DD)
+        async function initAuth() {
+            await initUsersAndMigration();
+
+            const savedUserId = localStorage.getItem('autolog_session_user_id');
+            if (savedUserId) {
+                const user = await getUserFromIDB(savedUserId);
+                if (user) {
+                    setLoggedInUser(user);
+                    return;
+                }
+            }
+
+            // Jeśli brak zapisanej sesji, pokaż modal logowania
+            showLoginModal();
+        }
+
+        function setLoggedInUser(user) {
+            currentAuthUser = user;
+            viewingUserId = null;
+
+            // Ukryj modal logowania
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('login-error-msg').classList.add('hidden');
+
+            // Zaktualizuj nagłówek
+            const nameEl = document.getElementById('nav-username');
+            const roleEl = document.getElementById('nav-user-role');
+            const roleIcon = document.getElementById('user-role-icon');
+            const adminBtn = document.getElementById('btn-admin-panel');
+
+            if (nameEl) nameEl.textContent = user.name || user.username;
+            if (roleEl) {
+                roleEl.textContent = user.role === 'admin' ? 'Administrator' : 'Użytkownik';
+                roleEl.className = user.role === 'admin' ? 'text-[10px] text-amber-400 font-mono font-bold' : 'text-[10px] text-blue-400 font-mono';
+            }
+            if (roleIcon) {
+                roleIcon.className = user.role === 'admin' ? 'fa-solid fa-user-shield text-amber-400' : 'fa-solid fa-user text-blue-400';
+            }
+            if (adminBtn) {
+                if (user.role === 'admin') adminBtn.classList.remove('hidden');
+                else adminBtn.classList.add('hidden');
+            }
+
+            updateSidebarGarageTitle();
+            loadActiveGarageCars();
+            renderAll();
+        }
+
+        function updateSidebarGarageTitle() {
+            const titleEl = document.getElementById('sidebar-garage-title');
+            const bannerEl = document.getElementById('admin-viewing-banner');
+            if (!titleEl) return;
+
+            if (viewingUserId && viewingUserId !== currentAuthUser.id) {
+                titleEl.textContent = 'Garaż podglądu';
+                if (bannerEl) bannerEl.classList.remove('hidden');
+            } else {
+                titleEl.textContent = currentAuthUser?.name ? `Garaż: ${currentAuthUser.name}` : 'Twój Garaż';
+                if (bannerEl) bannerEl.classList.add('hidden');
+            }
+        }
+
+        function showLoginModal() {
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error-msg').classList.add('hidden');
+        }
+
+        window.togglePasswordVisibility = function(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                input.type = 'password';
+                if (icon) icon.className = 'fa-solid fa-eye';
+            }
+        };
+
+        window.handleLoginSubmit = async function(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('login-username').value.trim();
+            const passwordInput = document.getElementById('login-password').value;
+            const rememberMe = document.getElementById('login-remember-me').checked;
+            const errorMsgEl = document.getElementById('login-error-msg');
+            const errorTextEl = document.getElementById('login-error-text');
+
+            if (!usernameInput || !passwordInput) {
+                errorTextEl.textContent = 'Podaj login oraz hasło.';
+                errorMsgEl.classList.remove('hidden');
+                return;
+            }
+
+            const user = await getUserByUsernameFromIDB(usernameInput);
+            if (!user) {
+                errorTextEl.textContent = 'Nie znaleziono użytkownika o takim loginie.';
+                errorMsgEl.classList.remove('hidden');
+                return;
+            }
+
+            const inputHash = await hashPassword(passwordInput);
+            if (user.passwordHash !== inputHash) {
+                errorTextEl.textContent = 'Nieprawidłowe hasło. Spróbuj ponownie.';
+                errorMsgEl.classList.remove('hidden');
+                return;
+            }
+
+            if (rememberMe) {
+                localStorage.setItem('autolog_session_user_id', user.id);
+            } else {
+                sessionStorage.setItem('autolog_session_user_id', user.id);
+            }
+
+            setLoggedInUser(user);
+            showToast(`Witaj, ${user.name || user.username}! Zalogowano pomyślnie.`);
+        };
+
+        window.logoutUser = function() {
+            localStorage.removeItem('autolog_session_user_id');
+            sessionStorage.removeItem('autolog_session_user_id');
+            currentAuthUser = null;
+            viewingUserId = null;
+            selectedCarId = null;
+            showLoginModal();
+            showToast('Wylogowano z systemu');
+        };
+
+        // ============================================================================
+        // PANEL ADMINISTRATORA: ZARZĄDZANIE KONTAMI I GARAŻAMI
+        // ============================================================================
+        window.openAdminModal = async function() {
+            if (!currentAuthUser || currentAuthUser.role !== 'admin') {
+                showToast('Brak uprawnień administratora', true);
+                return;
+            }
+            await renderAdminUsersList();
+            switchAdminTab('users');
+            document.getElementById('admin-modal').classList.remove('hidden');
+        };
+
+        window.closeAdminModal = function() {
+            document.getElementById('admin-modal').classList.add('hidden');
+        };
+
+        window.switchAdminTab = function(tab) {
+            const usersBtn = document.getElementById('admin-tab-users-btn');
+            const addBtn = document.getElementById('admin-tab-add-btn');
+            const usersContent = document.getElementById('admin-tab-users-content');
+            const addContent = document.getElementById('admin-tab-add-content');
+
+            if (tab === 'users') {
+                usersBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white transition flex items-center gap-1.5';
+                addBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5';
+                usersContent.classList.remove('hidden');
+                addContent.classList.add('hidden');
+            } else {
+                usersBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5';
+                addBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white transition flex items-center gap-1.5';
+                usersContent.classList.add('hidden');
+                addContent.classList.remove('hidden');
+            }
+        };
+
+        async function renderAdminUsersList() {
+            const listEl = document.getElementById('admin-users-list');
+            const countEl = document.getElementById('admin-users-count');
+            const users = await getAllUsersFromIDB();
+            countEl.textContent = users.length;
+
+            if (users.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-4 text-xs text-slate-500">Brak zarejestrowanych użytkowników.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = users.map(u => {
+                const isMe = u.id === currentAuthUser.id;
+                const userCars = allCachedCars.filter(c => c.userId === u.id);
+                const isCurrentViewing = viewingUserId ? (viewingUserId === u.id) : isMe;
+
+                return `
+                    <div class="bg-slate-950/80 border ${isCurrentViewing ? 'border-amber-500/60 bg-amber-500/5' : 'border-slate-800'} rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm text-white">${escapeHtml(u.name || u.username)}</span>
+                                <code class="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-900 text-slate-400">@${escapeHtml(u.username)}</code>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}">
+                                    ${u.role === 'admin' ? 'Administrator' : 'Użytkownik'}
+                                </span>
+                                ${isMe ? `<span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/30">To Ty</span>` : ''}
+                            </div>
+                            <div class="text-xs text-slate-400 mt-1 flex items-center gap-3">
+                                <span><i class="fa-solid fa-car text-blue-400 mr-1"></i>Pojazdów w garażu: <strong class="text-slate-200">${userCars.length}</strong></span>
+                                <span>•</span>
+                                <span>Utworzono: ${new Date(u.createdAt || Date.now()).toLocaleDateString('pl-PL')}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center flex-wrap gap-1.5 shrink-0">
+                            <button type="button" onclick="switchToUserGarage('${u.id}')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${isCurrentViewing ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} transition flex items-center gap-1" title="Przeglądaj lub edytuj garaż tego użytkownika">
+                                <i class="fa-solid fa-warehouse text-[10px]"></i>
+                                <span>${isCurrentViewing ? 'Aktywny garaż' : 'Otwórz garaż'}</span>
+                            </button>
+                            <button type="button" onclick="openAdminResetPwdModal('${u.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition" title="Zresetuj hasło temu użytkownikowi">
+                                <i class="fa-solid fa-key text-[10px]"></i>
+                            </button>
+                            ${!isMe ? `
+                                <button type="button" onclick="confirmDeleteUser('${u.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 text-xs transition" title="Usuń to konto">
+                                    <i class="fa-solid fa-trash-can text-[11px]"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.handleAdminCreateUser = async function(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('new-user-username').value.trim().toLowerCase();
+            const passwordInput = document.getElementById('new-user-password').value;
+            const nameInput = document.getElementById('new-user-name').value.trim();
+            const roleSelect = document.getElementById('new-user-role').value;
+
+            if (!usernameInput || !passwordInput) {
+                showToast('Wypełnij login i hasło', true);
+                return;
+            }
+
+            if (!/^[a-z0-9_-]+$/.test(usernameInput)) {
+                showToast('Login może zawierać tylko małe litery, cyfry oraz znaki _ i -', true);
+                return;
+            }
+
+            const existing = await getUserByUsernameFromIDB(usernameInput);
+            if (existing) {
+                showToast(`Użytkownik o loginie "${usernameInput}" już istnieje!`, true);
+                return;
+            }
+
+            const newUser = {
+                id: 'usr-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                username: usernameInput,
+                passwordHash: await hashPassword(passwordInput),
+                name: nameInput || usernameInput,
+                role: roleSelect,
+                createdAt: Date.now()
+            };
+
+            await saveUserToIDB(newUser);
+
+            // Zsynchronizuj nowe konto w Firestore, aby natychmiast pojawiło się na telefonie
+            if (db) {
+                try {
+                    const userDocRef = doc(db, 'users', newUser.id);
+                    await setDoc(userDocRef, newUser);
+                } catch (err) {
+                    console.warn('Uwaga synchronizacji usera Firestore:', err);
+                }
+            }
+
+            document.getElementById('new-user-username').value = '';
+            document.getElementById('new-user-password').value = '';
+            document.getElementById('new-user-name').value = '';
+
+            await renderAdminUsersList();
+            switchAdminTab('users');
+            showToast(`Utworzono konto dla ${newUser.name} (@${newUser.username})!`);
+        };
+
+        window.switchToUserGarage = async function(userId) {
+            const user = await getUserFromIDB(userId);
+            if (!user) return;
+
+            if (user.id === currentAuthUser.id) {
+                viewingUserId = null;
+            } else {
+                viewingUserId = user.id;
+                document.getElementById('admin-viewing-name').textContent = user.name || user.username;
+                document.getElementById('admin-viewing-login').textContent = `@${user.username}`;
+            }
+
+            updateSidebarGarageTitle();
+            loadActiveGarageCars();
+            selectedCarId = null;
+            closeAdminModal();
+            renderAll();
+            showToast(`Przełączono na garaż użytkownika: ${user.name || user.username}`);
+        };
+
+        window.returnToMyGarage = function() {
+            viewingUserId = null;
+            updateSidebarGarageTitle();
+            loadActiveGarageCars();
+            selectedCarId = null;
+            renderAll();
+            showToast('Powrócono do własnego garażu');
+        };
+
+        let targetResetUserId = null;
+        window.openAdminResetPwdModal = async function(userId) {
+            const user = await getUserFromIDB(userId);
+            if (!user) return;
+            targetResetUserId = userId;
+            document.getElementById('admin-reset-target-user').textContent = `${user.name} (@${user.username})`;
+            document.getElementById('admin-reset-new-pwd').value = '';
+            document.getElementById('admin-reset-pwd-modal').classList.remove('hidden');
+        };
+
+        window.closeAdminResetPwdModal = function() {
+            document.getElementById('admin-reset-pwd-modal').classList.add('hidden');
+            targetResetUserId = null;
+        };
+
+        window.handleAdminResetPwdSubmit = async function(e) {
+            e.preventDefault();
+            if (!targetResetUserId) return;
+            const newPwd = document.getElementById('admin-reset-new-pwd').value;
+            if (!newPwd || newPwd.length < 4) {
+                showToast('Hasło musi mieć co najmniej 4 znaki', true);
+                return;
+            }
+
+            const user = await getUserFromIDB(targetResetUserId);
+            if (!user) return;
+
+            user.passwordHash = await hashPassword(newPwd);
+            await saveUserToIDB(user);
+
+            if (db) {
+                try {
+                    const userDocRef = doc(db, 'users', user.id);
+                    await setDoc(userDocRef, user);
+                } catch (e) {
+                    console.warn('Błąd aktualizacji hasła w chmurze:', e);
+                }
+            }
+
+            closeAdminResetPwdModal();
+            showToast(`Zmieniono hasło dla konta @${user.username}`);
+        };
+
+        window.confirmDeleteUser = function(userId) {
+            document.getElementById('confirm-title').textContent = 'Usunąć to konto użytkownika?';
+            document.getElementById('confirm-desc').textContent = 'Konto zostanie trwale usunięte wraz z pojazdami z jego garażu.';
+            const btn = document.getElementById('confirm-action-btn');
+            btn.onclick = async () => {
+                await deleteUserFromIDB(userId);
+
+                if (db) {
+                    try {
+                        await deleteDoc(doc(db, 'users', userId));
+                    } catch (e) {
+                        console.warn(e);
+                    }
+                }
+
+                allCachedCars = allCachedCars.filter(c => c.userId !== userId);
+                await saveCarsCacheToIDB(allCachedCars);
+
+                if (viewingUserId === userId) {
+                    viewingUserId = null;
+                    updateSidebarGarageTitle();
+                }
+
+                loadActiveGarageCars();
+                await renderAdminUsersList();
+                renderAll();
+                closeConfirmModal();
+                showToast('Usunięto konto użytkownika i powiązany garaż');
+            };
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        };
+
+        // Zmiana własnego hasła
+        window.openChangePasswordModal = function() {
+            document.getElementById('input-old-pwd').value = '';
+            document.getElementById('input-new-pwd').value = '';
+            document.getElementById('input-new-pwd-confirm').value = '';
+            document.getElementById('change-password-modal').classList.remove('hidden');
+        };
+
+        window.closeChangePasswordModal = function() {
+            document.getElementById('change-password-modal').classList.add('hidden');
+        };
+
+        window.handleChangePasswordSubmit = async function(e) {
+            e.preventDefault();
+            const oldPwd = document.getElementById('input-old-pwd').value;
+            const newPwd = document.getElementById('input-new-pwd').value;
+            const confirmPwd = document.getElementById('input-new-pwd-confirm').value;
+
+            if (newPwd !== confirmPwd) {
+                showToast('Nowe hasła nie są identyczne!', true);
+                return;
+            }
+
+            if (newPwd.length < 4) {
+                showToast('Nowe hasło musi mieć co najmniej 4 znaki', true);
+                return;
+            }
+
+            const user = await getUserFromIDB(currentAuthUser.id);
+            if (!user) return;
+
+            const oldHash = await hashPassword(oldPwd);
+            if (user.passwordHash !== oldHash) {
+                showToast('Dotychczasowe hasło jest niepoprawne!', true);
+                return;
+            }
+
+            user.passwordHash = await hashPassword(newPwd);
+            await saveUserToIDB(user);
+            currentAuthUser = user;
+
+            if (db) {
+                try {
+                    await setDoc(doc(db, 'users', user.id), user);
+                } catch (e) {
+                    console.warn(e);
+                }
+            }
+
+            closeChangePasswordModal();
+            showToast('Hasło zostało pomyślnie zmienione!');
+        };
+
+        // ============================================================================
+        // UKŁADANIE POJAZDÓW W GARAŻU (TRWAŁE ZACHOWANIE MIEJSCA, STRZAŁKI, DRAG & DROP)
+        // ============================================================================
+        async function saveCurrentCarsOrder() {
+            cars.forEach((car, index) => {
+                car.order = index;
+                const idx = allCachedCars.findIndex(c => c.id === car.id);
+                if (idx >= 0) {
+                    allCachedCars[idx].order = index;
+                }
+            });
+
+            await saveCarsCacheToIDB(allCachedCars);
+
+            // Zsynchronizuj kolejność w chmurze
+            if (db) {
+                for (const car of cars) {
+                    try {
+                        const carDocRef = doc(db, 'cars', car.id);
+                        await setDoc(carDocRef, car);
+                    } catch (e) {
+                        console.warn('Błąd zapisu kolejności Firestore:', e);
+                    }
+                }
+            }
+
+            renderCarsSidebar();
+        }
+
+        window.moveCarUp = async function(carId, event) {
+            if (event) event.stopPropagation();
+            const idx = cars.findIndex(c => c.id === carId);
+            if (idx <= 0) return;
+
+            const temp = cars[idx];
+            cars[idx] = cars[idx - 1];
+            cars[idx - 1] = temp;
+
+            await saveCurrentCarsOrder();
+            showToast(`Przesunięto ${temp.name} w górę`);
+        };
+
+        window.moveCarDown = async function(carId, event) {
+            if (event) event.stopPropagation();
+            const idx = cars.findIndex(c => c.id === carId);
+            if (idx < 0 || idx >= cars.length - 1) return;
+
+            const temp = cars[idx];
+            cars[idx] = cars[idx + 1];
+            cars[idx + 1] = temp;
+
+            await saveCurrentCarsOrder();
+            showToast(`Przesunięto ${temp.name} w dół`);
+        };
+
+        window.handleCarDragStart = function(event, carId) {
+            draggedCarId = carId;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', carId);
+        };
+
+        window.handleCarDragOver = function(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            const card = event.currentTarget;
+            card.classList.add('car-drag-over');
+        };
+
+        window.handleCarDragLeave = function(event) {
+            const card = event.currentTarget;
+            card.classList.remove('car-drag-over');
+        };
+
+        window.handleCarDrop = async function(event, targetCarId) {
+            event.preventDefault();
+            const card = event.currentTarget;
+            card.classList.remove('car-drag-over');
+
+            if (!draggedCarId || draggedCarId === targetCarId) {
+                draggedCarId = null;
+                return;
+            }
+
+            const fromIdx = cars.findIndex(c => c.id === draggedCarId);
+            const toIdx = cars.findIndex(c => c.id === targetCarId);
+
+            if (fromIdx >= 0 && toIdx >= 0) {
+                const [movedCar] = cars.splice(fromIdx, 1);
+                cars.splice(toIdx, 0, movedCar);
+                await saveCurrentCarsOrder();
+                showToast(`Zmieniono pozycję pojazdu ${movedCar.name}`);
+            }
+
+            draggedCarId = null;
+        };
+
+        // ============================================================================
+        // PARSOWANIE DAT I CHRONOLOGICZNE SORTOWANIE WPISÓW
+        // ============================================================================
         function parseRecordDateString(dateStr) {
             if (!dateStr) return null;
             const clean = String(dateStr).trim();
 
-            // Format RRRR-MM-DD
-            const isoMatch = clean.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            let isoMatch = clean.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
             if (isoMatch) {
                 return new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
             }
 
-            // Format DD.MM.RRRR lub D.M.RRRR
-            const dmyMatch = clean.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+            let dmyMatch = clean.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
             if (dmyMatch) {
                 return new Date(parseInt(dmyMatch[3], 10), parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
             }
 
-            // Format MM.RRRR (np. 04.2025) - przyjmujemy 1 dzień miesiąca
-            const myMatch = clean.match(/^(\d{1,2})[./-](\d{4})$/);
+            let myMatch = clean.match(/^(\d{1,2})[./-](\d{4})$/);
             if (myMatch) {
                 return new Date(parseInt(myMatch[2], 10), parseInt(myMatch[1], 10) - 1, 1);
             }
 
+            let shortYearMatch = clean.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2})$/);
+            if (shortYearMatch) {
+                let yr = parseInt(shortYearMatch[3], 10);
+                yr += (yr < 70 ? 2000 : 1900);
+                return new Date(yr, parseInt(shortYearMatch[2], 10) - 1, parseInt(shortYearMatch[1], 10));
+            }
+
+            const parsed = Date.parse(clean);
+            if (!isNaN(parsed)) {
+                return new Date(parsed);
+            }
+
             return null;
         }
+
+        function sortRecordsChronologically(recordsArray, order = 'DESC') {
+            return [...recordsArray].sort((a, b) => {
+                const dateA = parseRecordDateString(a.date);
+                const dateB = parseRecordDateString(b.date);
+                const timeA = dateA ? dateA.getTime() : 0;
+                const timeB = dateB ? dateB.getTime() : 0;
+
+                if (timeA !== timeB) {
+                    return order === 'DESC' ? (timeB - timeA) : (timeA - timeB);
+                }
+
+                const kmA = parseMileageValue(a.mileage);
+                const kmB = parseMileageValue(b.mileage);
+                if (kmA !== kmB) {
+                    return order === 'DESC' ? (kmB - kmA) : (kmA - kmB);
+                }
+
+                return order === 'DESC' 
+                    ? String(b.id || '').localeCompare(String(a.id || ''))
+                    : String(a.id || '').localeCompare(String(b.id || ''));
+            });
+        }
+
+        window.toggleRecordsSortOrder = function() {
+            recordsSortOrder = recordsSortOrder === 'DESC' ? 'ASC' : 'DESC';
+            const icon = document.getElementById('sort-order-icon');
+            const label = document.getElementById('sort-order-label');
+            if (icon && label) {
+                if (recordsSortOrder === 'DESC') {
+                    icon.className = 'fa-solid fa-arrow-down-wide-short text-blue-400';
+                    label.textContent = 'Najnowsze na górze';
+                } else {
+                    icon.className = 'fa-solid fa-arrow-up-wide-short text-blue-400';
+                    label.textContent = 'Najstarsze na górze';
+                }
+            }
+            renderRecords();
+        };
 
         function formatDateToPl(dateObj) {
             if (!dateObj || isNaN(dateObj.getTime())) return '-';
@@ -1112,7 +2146,6 @@
             return `${y}-${m}-${d}`;
         }
 
-        // Funkcja pomocnicza do konwersji przebiegu np. "325kkm" -> 325000
         function parseMileageValue(raw) {
             if (!raw) return 0;
             const str = String(raw).toLowerCase().trim().replace(/\s+/g, '');
@@ -1124,7 +2157,6 @@
             return isNaN(digits) ? 0 : digits;
         }
 
-        // Formatowanie przebiegu do czytelnej postaci np. 340 000 km (340kkm)
         function formatMileage(km) {
             const num = parseMileageValue(km);
             if (!num) return 'Brak danych';
@@ -1132,11 +2164,11 @@
             return `${num.toLocaleString('pl-PL')} km (${kkm}kkm)`;
         }
 
-        // Powiadomienia Toast
         window.showToast = function(message, isError = false) {
             const toast = document.getElementById('toast');
             const msgEl = document.getElementById('toast-msg');
             const iconEl = document.getElementById('toast-icon');
+            if (!toast || !msgEl || !iconEl) return;
             msgEl.textContent = message;
             iconEl.className = isError 
                 ? 'fa-solid fa-circle-exclamation text-red-400 text-base' 
@@ -1147,7 +2179,6 @@
             }, 3000);
         };
 
-        // Aktualizacja wskaźnika synchronizacji
         function setSyncIndicator(status, text) {
             const dot = document.getElementById('sync-dot');
             const label = document.getElementById('sync-text');
@@ -1176,30 +2207,24 @@
             }
         }
 
-        // Otwieranie i zamykanie modala ustawień łącza pod przyciskiem "Zsynchronizowano"
+        // ============================================================================
+        // MODAL USTAWIEŃ POŁĄCZENIA I SKLEPU (BEZ POKAZYWANIA KLUCZA)
+        // ============================================================================
         window.openConnectionModal = function() {
             const shopInput = document.getElementById('input-shop-url');
             if (shopInput) shopInput.value = customShopUrlTemplate;
-            const cfgInput = document.getElementById('input-custom-firebase-config');
-            if (cfgInput && savedCustomFirebaseConfigRaw) {
-                cfgInput.value = savedCustomFirebaseConfigRaw;
-            }
             document.getElementById('connection-modal').classList.remove('hidden');
         };
 
         window.closeConnectionModal = function() {
+            const shopInput = document.getElementById('input-shop-url');
+            if (shopInput && shopInput.value.trim() !== '') {
+                customShopUrlTemplate = shopInput.value.trim();
+                saveSettingToIDB('customShopUrlTemplate', customShopUrlTemplate);
+            }
             document.getElementById('connection-modal').classList.add('hidden');
         };
 
-        window.clearSavedFirebaseConfig = async function() {
-            savedCustomFirebaseConfigRaw = '';
-            const cfgInput = document.getElementById('input-custom-firebase-config');
-            if (cfgInput) cfgInput.value = '';
-            await saveSettingToIDB('customFirebaseConfigRaw', '');
-            showToast('Usunięto zapisany własny klucz Firebase');
-        };
-
-        // Wyszukiwanie numeru porównawczego bezpośrednio w ulubionym sklepie użytkownika
         window.searchPartInShop = function(event, elementId) {
             if (event) event.stopPropagation();
             const partNumber = document.getElementById(elementId)?.textContent?.trim();
@@ -1219,12 +2244,17 @@
             window.open(url, '_blank', 'noopener,noreferrer');
         };
 
-        // Eksport wszystkich samochodów i historii do pliku JSON
+        // ============================================================================
+        // EKSPORT / IMPORT KOPII ZAPASOWEJ (.JSON)
+        // ============================================================================
         window.exportDatabaseJson = function() {
             try {
+                const activeId = getActiveGarageUserId();
                 const exportPayload = {
                     app: 'AutoLog - Cyfrowa Książka Serwisowa',
+                    version: '2.0-cloud-pwa',
                     exportedAt: new Date().toISOString(),
+                    userId: activeId,
                     shopUrlTemplate: customShopUrlTemplate,
                     cars: cars
                 };
@@ -1234,7 +2264,7 @@
                 const link = document.createElement('a');
                 const dateStamp = new Date().toISOString().slice(0, 10);
                 link.href = url;
-                link.download = `AutoLog_Kopia_Zapasowa_${dateStamp}.json`;
+                link.download = `AutoLog_Garaz_${dateStamp}.json`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1246,7 +2276,6 @@
             }
         };
 
-        // Import bazy pojazdów z pliku JSON
         window.importDatabaseJson = function(event) {
             const file = event.target.files?.[0];
             if (!file) return;
@@ -1266,22 +2295,31 @@
                         customShopUrlTemplate = parsed.shopUrlTemplate;
                     }
 
+                    const activeId = getActiveGarageUserId();
+
                     for (const carItem of importedCars) {
                         if (!carItem.id) carItem.id = 'car-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
-                        const existingIdx = cars.findIndex(c => c.id === carItem.id);
-                        if (existingIdx >= 0) {
-                            cars[existingIdx] = { ...carItem, updatedAt: Date.now() };
-                        } else {
-                            cars.push({ ...carItem, updatedAt: Date.now() });
+                        carItem.userId = activeId;
+                        if (typeof carItem.order !== 'number') {
+                            carItem.order = cars.length;
                         }
-                        if (currentUser && db) {
+
+                        const existingIdx = allCachedCars.findIndex(c => c.id === carItem.id);
+                        if (existingIdx >= 0) {
+                            allCachedCars[existingIdx] = { ...carItem, updatedAt: Date.now() };
+                        } else {
+                            allCachedCars.push({ ...carItem, updatedAt: Date.now() });
+                        }
+
+                        if (db) {
                             await persistCarToFirestore(carItem);
                         }
                     }
 
-                    await saveCarsCacheToIDB(cars);
+                    await saveCarsCacheToIDB(allCachedCars);
+                    loadActiveGarageCars();
                     renderAll();
-                    showToast(`Zaimportowano pomyślnie ${importedCars.length} pojazd(ów)!`);
+                    showToast(`Zaimportowano pomyślnie ${importedCars.length} pojazd(ów) do tego garażu!`);
                 } catch (err) {
                     console.error('Błąd importu JSON:', err);
                     showToast('Błąd odczytu pliku JSON', true);
@@ -1292,19 +2330,19 @@
             reader.readAsText(file);
         };
 
-        // Ręczne wymuszenie synchronizacji wszystkich aut z chmurą Firebase
+        // Ręczne wymuszenie synchronizacji
         window.forceManualSync = async function() {
             setSyncIndicator('syncing', 'Synchronizacja...');
             try {
-                if (!currentUser || !db) {
+                if (!db) {
                     await initFirebase();
                 } else {
                     for (const car of cars) {
                         await persistCarToFirestore(car);
                     }
                 }
-                setSyncIndicator('online', 'Zsynchronizowano');
-                showToast('Dane zostały pomyślnie zsynchronizowane z chmurą!');
+                setSyncIndicator('online', 'Zsynchronizowano z chmurą');
+                showToast('Wszystkie dane zostały pomyślnie zsynchronizowane z chmurą!');
             } catch (e) {
                 console.error(e);
                 setSyncIndicator('offline', 'Błąd łącza');
@@ -1312,250 +2350,195 @@
             }
         };
 
-        // Zastosowanie własnej konfiguracji łącza Firebase lub ponowne połączenie
-        window.applyCustomFirebaseConnection = async function() {
-            const shopInput = document.getElementById('input-shop-url');
-            if (shopInput && shopInput.value.trim() !== '') {
-                customShopUrlTemplate = shopInput.value.trim();
-                await saveSettingToIDB('customShopUrlTemplate', customShopUrlTemplate);
-            }
-
-            const rawConfig = document.getElementById('input-custom-firebase-config').value.trim();
-            if (!rawConfig) {
-                await window.forceManualSync();
-                closeConnectionModal();
-                return;
-            }
-            try {
-                const parsedConfig = parseFlexibleFirebaseConfig(rawConfig);
-                savedCustomFirebaseConfigRaw = JSON.stringify(parsedConfig, null, 2);
-                await saveSettingToIDB('customFirebaseConfigRaw', savedCustomFirebaseConfigRaw);
-
-                setSyncIndicator('syncing', 'Łączenie z Firebase...');
-                const customApp = initializeApp(parsedConfig, 'custom-app-' + Date.now());
-                auth = getAuth(customApp);
-                db = getFirestore(customApp);
-
-                try {
-                    await signInAnonymously(auth);
-                } catch (authErr) {
-                    console.warn('Logowanie anonimowe niedostępne lub wyłączone w konsoli, próba bezpośredniego zapisu Firestore:', authErr);
-                }
-
-                currentUser = auth.currentUser || { uid: 'custom-project-user' };
-                const uidEl = document.getElementById('user-id-display');
-                if (uidEl) uidEl.textContent = `Połączono z projektem: ${parsedConfig.projectId || 'Własny Firebase'} (${currentUser.uid})`;
-
-                // Wyślij dotychczasowe auta z pamięci podręcznej do nowo podłączonej chmury
-                for (const c of cars) {
-                    await persistCarToFirestore(c);
-                }
-
-                setupRealtimeListener();
-                showToast('Zapisano klucz na stałe i połączono z Firebase!');
-                closeConnectionModal();
-            } catch (err) {
-                console.error(err);
-                showToast('Nieprawidłowy format klucza Firebase – sprawdź wklejony kod', true);
-            }
-        };
-
-        // Inicjalizacja Firebase oraz odczyt trwałej pamięci IndexedDB przy starcie
+        // ============================================================================
+        // INICJALIZACJA I SYNCHRONIZACJA Z CHMURĄ FIREBASE (ksiazkaservisowa)
+        // ============================================================================
         async function initFirebase() {
             try {
-                // 1. Wczytaj zapisane ustawienia oraz zbuforowane pojazdy z trwałej bazy przeglądarki IndexedDB
                 const cachedShopUrl = await getSettingFromIDB('customShopUrlTemplate');
                 if (cachedShopUrl) {
                     customShopUrlTemplate = cachedShopUrl;
                 }
 
-                const cachedCars = await loadCarsCacheFromIDB();
-                if (Array.isArray(cachedCars) && cachedCars.length > 0) {
-                    cars = cachedCars;
-                    renderAll();
-                }
-
-                const cachedFirebaseRaw = await getSettingFromIDB('customFirebaseConfigRaw');
-                if (cachedFirebaseRaw) {
-                    savedCustomFirebaseConfigRaw = cachedFirebaseRaw;
-                }
-
-                // 2. Sprawdź, czy użytkownik zapisał własny klucz Firebase lub czy dostępny jest klucz środowiskowy
-                let firebaseConfig = null;
-                let isCustomProject = false;
-
-                if (savedCustomFirebaseConfigRaw) {
-                    try {
-                        firebaseConfig = parseFlexibleFirebaseConfig(savedCustomFirebaseConfigRaw);
-                        isCustomProject = true;
-                    } catch (e) {
-                        console.warn('Błąd parsowania zapisanego klucza Firebase:', e);
-                    }
-                }
-
-                if (!firebaseConfig && typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    firebaseConfig = JSON.parse(__firebase_config);
-                }
-
-                if (!firebaseConfig) {
-                    setSyncIndicator('online', 'Baza przeglądarki (Trwała)');
-                    const uidEl = document.getElementById('user-id-display');
-                    if (uidEl) uidEl.textContent = 'Zapis trwały w przeglądarce (IndexedDB) – wklej klucz Firebase poniżej, aby synchronizować w chmurze.';
-                    renderAll();
-                    return;
-                }
-
-                const app = initializeApp(firebaseConfig, isCustomProject ? 'saved-custom-app-' + Date.now() : undefined);
+                // Inicjalizuj aplikację Firebase z wbudowaną konfiguracją ksiazkaservisowa
+                const app = initializeApp(BUILTIN_FIREBASE_CONFIG);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                setSyncIndicator('syncing', 'Autoryzacja...');
+                setSyncIndicator('syncing', 'Łączenie z chmurą...');
 
                 try {
-                    if (!isCustomProject && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    await signInAnonymously(auth);
                 } catch (authError) {
                     console.warn('Uwaga autoryzacji Firebase:', authError);
                 }
 
-                currentUser = auth.currentUser || (isCustomProject ? { uid: 'custom-project-user' } : null);
-                if (currentUser) {
-                    const uidEl = document.getElementById('user-id-display');
-                    if (uidEl) {
-                        uidEl.textContent = isCustomProject
-                            ? `Połączono z projektem: ${firebaseConfig.projectId || 'Własny Firebase'}`
-                            : `Stała kolekcja chmury (Sesja: ${currentUser.uid})`;
-                    }
-                    setupRealtimeListener();
-                } else {
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            currentUser = user;
-                            const uidEl = document.getElementById('user-id-display');
-                            if (uidEl) uidEl.textContent = `Stała kolekcja chmury (Sesja: ${user.uid})`;
-                            setupRealtimeListener();
-                        }
-                    });
-                }
+                firebaseCurrentUser = auth.currentUser || { uid: 'ksiazkaservisowa-user' };
+                setSyncIndicator('online', 'Połączono z chmurą');
+
+                // Rozpocznij nasłuchiwanie w czasie rzeczywistym
+                setupRealtimeListeners();
             } catch (err) {
                 console.error('Błąd inicjalizacji Firebase:', err);
-                setSyncIndicator('online', 'Baza przeglądarki (Trwała)');
-                renderAll();
+                setSyncIndicator('online', 'Baza lokalna (Offline)');
             }
         }
 
-        // Nasłuchiwanie stałej kolekcji samochodów w Firestore (niezależnej od zmiany anonimowego UID po odświeżeniu)
-        let unsubscribeSnapshot = null;
-        function setupRealtimeListener() {
-            if (!currentUser || !db) return;
+        let unsubscribeCars = null;
+        let unsubscribeUsers = null;
 
-            if (unsubscribeSnapshot) {
-                unsubscribeSnapshot();
-            }
+        function setupRealtimeListeners() {
+            if (!db) return;
 
-            const carsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'cars');
+            if (unsubscribeCars) unsubscribeCars();
+            if (unsubscribeUsers) unsubscribeUsers();
 
-            unsubscribeSnapshot = onSnapshot(carsColRef, async (snapshot) => {
-                const loadedCars = [];
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    let parsedRecords = [];
-                    if (Array.isArray(data.records)) {
-                        parsedRecords = data.records;
-                    } else if (typeof data.records === 'string') {
-                        try { parsedRecords = JSON.parse(data.records); } catch (e) { parsedRecords = []; }
-                    }
+            // 1. Synchronizacja samochodów w czasie rzeczywistym (między wszystkimi urządzeniami)
+            const carsColRef = collection(db, 'cars');
+            unsubscribeCars = onSnapshot(carsColRef, async (snapshot) => {
+                let changed = false;
 
-                    let parsedTodos = [];
-                    if (Array.isArray(data.todos)) {
-                        parsedTodos = data.todos;
-                    } else if (typeof data.todos === 'string') {
-                        try { parsedTodos = JSON.parse(data.todos); } catch (e) { parsedTodos = []; }
-                    }
+                snapshot.docChanges().forEach((change) => {
+                    const data = change.doc.data();
+                    let parsedRecords = Array.isArray(data.records) ? data.records : [];
+                    let parsedTodos = Array.isArray(data.todos) ? data.todos : [];
 
-                    loadedCars.push({
+                    const carItem = {
                         ...data,
-                        id: docSnap.id,
+                        id: change.doc.id,
                         records: parsedRecords,
                         todos: parsedTodos
-                    });
+                    };
+
+                    if (change.type === 'added' || change.type === 'modified') {
+                        const idx = allCachedCars.findIndex(c => c.id === carItem.id);
+                        if (idx >= 0) {
+                            allCachedCars[idx] = carItem;
+                        } else {
+                            allCachedCars.push(carItem);
+                        }
+                        changed = true;
+                    } else if (change.type === 'removed') {
+                        allCachedCars = allCachedCars.filter(c => c.id !== carItem.id);
+                        changed = true;
+                    }
                 });
 
-                // Jeśli chmura jest jeszcze pusta, a mamy pojazdy w pamięci podręcznej IndexedDB, wyślij je do chmury
-                if (loadedCars.length === 0 && cars.length > 0) {
-                    for (const localCar of cars) {
-                        const carDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'cars', localCar.id);
-                        await setDoc(carDocRef, localCar);
+                // Jeśli chmura jest pusta przy pierwszym uruchomieniu, a mamy auta lokalne, wyślij je do chmury
+                if (snapshot.empty && allCachedCars.length > 0) {
+                    for (const localCar of allCachedCars) {
+                        try {
+                            await setDoc(doc(db, 'cars', localCar.id), localCar);
+                        } catch (e) {
+                            console.warn('Błąd uploadu auta:', e);
+                        }
                     }
-                    return;
                 }
 
-                // Sortowanie w pamięci JS (RULE 2)
-                loadedCars.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-                cars = loadedCars;
-                await saveCarsCacheToIDB(cars);
-
-                if (selectedCarId && !cars.some(c => c.id === selectedCarId)) {
-                    selectedCarId = null;
+                if (changed) {
+                    await saveCarsCacheToIDB(allCachedCars);
+                    loadActiveGarageCars();
+                    renderAll();
                 }
 
-                setSyncIndicator('online', 'Zsynchronizowano');
-                renderAll();
+                setSyncIndicator('online', 'Zsynchronizowano z chmurą');
             }, (error) => {
-                console.error('Błąd odczytu Firestore:', error);
+                console.error('Błąd nasłuchu Firestore cars:', error);
                 setSyncIndicator('online', 'Zapis lokalny (IDB)');
+            });
+
+            // 2. Synchronizacja kont użytkowników w czasie rzeczywistym (aby konta stworzone przez admina od razu działały na telefonie)
+            const usersColRef = collection(db, 'users');
+            unsubscribeUsers = onSnapshot(usersColRef, async (snapshot) => {
+                snapshot.docChanges().forEach(async (change) => {
+                    const userData = { ...change.doc.data(), id: change.doc.id };
+                    if (change.type === 'added' || change.type === 'modified') {
+                        await saveUserToIDB(userData);
+                    } else if (change.type === 'removed') {
+                        await deleteUserFromIDB(userData.id);
+                    }
+                });
+
+                // Jeśli chmura users jest pusta, wyślij użytkowników lokalnych (w tym admina)
+                if (snapshot.empty) {
+                    const localUsers = await getAllUsersFromIDB();
+                    for (const u of localUsers) {
+                        try {
+                            await setDoc(doc(db, 'users', u.id), u);
+                        } catch (e) {
+                            console.warn(e);
+                        }
+                    }
+                }
+            }, (error) => {
+                console.warn('Błąd nasłuchu Firestore users:', error);
             });
         }
 
-        // Zapis pojedynczego auta zarówno do trwałej bazy przeglądarki (IndexedDB), jak i do Firestore
+        // ZAPIS AUTA: Gwarancja zachowania kolejności (order) i natychmiastowej synchronizacji w chmurze
         async function persistCarToFirestore(carObj) {
-            const existingIdx = cars.findIndex(c => c.id === carObj.id);
-            const updatedObj = { ...carObj, updatedAt: Date.now() };
-            if (existingIdx >= 0) {
-                cars[existingIdx] = updatedObj;
-            } else {
-                cars.unshift(updatedObj);
+            const activeId = getActiveGarageUserId();
+            if (!carObj.userId) {
+                carObj.userId = activeId;
             }
 
-            // Zawsze zapisz w trwałej bazie przeglądarki IndexedDB (gwarancja, że nic nie zniknie po odświeżeniu)
-            await saveCarsCacheToIDB(cars);
+            const existingAllIdx = allCachedCars.findIndex(c => c.id === carObj.id);
+            const updatedObj = { ...carObj, updatedAt: Date.now() };
+
+            if (existingAllIdx >= 0) {
+                allCachedCars[existingAllIdx] = updatedObj;
+            } else {
+                allCachedCars.push(updatedObj);
+            }
+
+            const carIdx = cars.findIndex(c => c.id === carObj.id);
+            if (carIdx >= 0) {
+                cars[carIdx] = updatedObj;
+            } else {
+                cars.push(updatedObj);
+            }
+
+            await saveCarsCacheToIDB(allCachedCars);
             renderAll();
 
-            if (!currentUser || !db) {
+            if (!db) {
                 return;
             }
 
             try {
-                setSyncIndicator('syncing', 'Zapisywanie...');
-                const carDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'cars', carObj.id);
+                setSyncIndicator('syncing', 'Zapisywanie w chmurze...');
+                const carDocRef = doc(db, 'cars', carObj.id);
                 await setDoc(carDocRef, updatedObj);
-                setSyncIndicator('online', 'Zsynchronizowano');
+                setSyncIndicator('online', 'Zsynchronizowano z chmurą');
             } catch (err) {
                 console.error('Błąd zapisu do Firestore:', err);
-                setSyncIndicator('online', 'Zapisano w przeglądarce');
+                setSyncIndicator('online', 'Zapisano w telefonie (IDB)');
             }
         }
 
-        // Całkowite czyszczenie bazy danych ze wszystkich pojazdów
+        // Czyszczenie bieżącego garażu
         window.clearAllCarsFromDatabase = async function() {
             try {
-                setSyncIndicator('syncing', 'Czyszczenie bazy...');
-                if (currentUser && db) {
-                    const deletePromises = cars.map(c => {
-                        const carDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'cars', c.id);
+                setSyncIndicator('syncing', 'Czyszczenie garażu...');
+                const activeId = getActiveGarageUserId();
+                const carsToDelete = cars.filter(c => c.userId === activeId);
+
+                if (db) {
+                    const deletePromises = carsToDelete.map(c => {
+                        const carDocRef = doc(db, 'cars', c.id);
                         return deleteDoc(carDocRef);
                     });
                     await Promise.all(deletePromises);
                 }
+
+                allCachedCars = allCachedCars.filter(c => c.userId !== activeId);
                 cars = [];
                 selectedCarId = null;
-                await saveCarsCacheToIDB([]);
-                setSyncIndicator('online', 'Zsynchronizowano');
+
+                await saveCarsCacheToIDB(allCachedCars);
+                setSyncIndicator('online', 'Zsynchronizowano z chmurą');
                 renderAll();
-                showToast('Baza pojazdów została całkowicie wyczyszczona!');
+                showToast('Ten garaż został całkowicie wyczyszczony!');
             } catch (e) {
                 console.error('Błąd czyszczenia bazy:', e);
                 showToast('Wystąpił błąd podczas usuwania pojazdów', true);
@@ -1564,11 +2547,11 @@
 
         window.confirmClearAllCars = function() {
             if (cars.length === 0) {
-                showToast('Baza pojazdów jest już pusta');
+                showToast('Ten garaż jest już pusty');
                 return;
             }
-            document.getElementById('confirm-title').textContent = 'Usunąć wszystkie pojazdy z bazy?';
-            document.getElementById('confirm-desc').textContent = `Czy na pewno chcesz bezpowrotnie usunąć wszystkie pojazdy (${cars.length}) wraz z ich historią z bazy danych?`;
+            document.getElementById('confirm-title').textContent = 'Wyczyścić ten garaż?';
+            document.getElementById('confirm-desc').textContent = `Czy na pewno chcesz bezpowrotnie usunąć wszystkie pojazdy (${cars.length}) z tego garażu?`;
             const btn = document.getElementById('confirm-action-btn');
             btn.onclick = async () => {
                 await clearAllCarsFromDatabase();
@@ -1577,13 +2560,14 @@
             document.getElementById('confirm-modal').classList.remove('hidden');
         };
 
-        // Główne renderowanie całego interfejsu
         function renderAll() {
             renderCarsSidebar();
             renderSelectedCarDetails();
         }
 
-        // Renderowanie listy aut w lewym panelu (z uwzględnieniem wyszukiwarki)
+        // ============================================================================
+        // RENDEROWANIE GARAŻU I LISTY SAMOCHODÓW (TRWAŁA KOLEJNOŚĆ)
+        // ============================================================================
         window.renderCarsSidebar = function() {
             const listEl = document.getElementById('cars-list');
             const countEl = document.getElementById('cars-count');
@@ -1594,7 +2578,7 @@
             if (cars.length === 0) {
                 listEl.innerHTML = `
                     <div class="text-center py-6 px-3 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                        Brak zapisanych pojazdów. Kliknij "Dodaj Pojazd".
+                        Brak pojazdów w tym garażu. Kliknij "Dodaj Pojazd".
                     </div>
                 `;
                 return;
@@ -1622,27 +2606,72 @@
                 const isSelected = car.id === selectedCarId;
                 const recordsCount = Array.isArray(car.records) ? car.records.length : 0;
                 const activeTodosCount = Array.isArray(car.todos) ? car.todos.filter(t => !t.done).length : 0;
+                const realIndex = cars.findIndex(c => c.id === car.id);
+                const isFirst = realIndex === 0;
+                const isLast = realIndex === cars.length - 1;
+
                 return `
-                    <div onclick="selectCar('${car.id}')" class="cursor-pointer rounded-xl p-3.5 transition border ${isSelected ? 'bg-blue-600/15 border-blue-500/60 shadow-lg shadow-blue-950/50' : 'bg-slate-950/60 hover:bg-slate-800/70 border-slate-800/90'}">
-                        <div class="flex items-center justify-between">
-                            <div class="font-bold text-sm ${isSelected ? 'text-white' : 'text-slate-200'} flex items-center gap-2">
-                                <i class="fa-solid fa-car ${isSelected ? 'text-blue-400' : 'text-slate-500'}"></i>
-                                <span>${escapeHtml(car.name)}</span>
+                    <div 
+                        draggable="true"
+                        ondragstart="handleCarDragStart(event, '${car.id}')"
+                        ondragover="handleCarDragOver(event)"
+                        ondragleave="handleCarDragLeave(event)"
+                        ondrop="handleCarDrop(event, '${car.id}')"
+                        onclick="selectCar('${car.id}')" 
+                        class="cursor-pointer rounded-xl p-3 transition border ${isSelected ? 'bg-blue-600/15 border-blue-500/60 shadow-lg shadow-blue-950/50' : 'bg-slate-950/60 hover:bg-slate-800/70 border-slate-800/90'} group"
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            <!-- Uchwyt drag & drop i strzałki przestawiania kolejności -->
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="cursor-grab text-slate-600 group-hover:text-slate-400 p-0.5" title="Przeciągnij, aby poukładać kolejność w garażu">
+                                    <i class="fa-solid fa-grip-vertical text-xs"></i>
+                                </span>
+                                <div class="font-bold text-sm ${isSelected ? 'text-white' : 'text-slate-200'} flex items-center gap-1.5 truncate">
+                                    <i class="fa-solid fa-car ${isSelected ? 'text-blue-400' : 'text-slate-500'}"></i>
+                                    <span class="truncate">${escapeHtml(car.name)}</span>
+                                </div>
                             </div>
-                            <span class="text-[11px] font-mono px-2 py-0.5 rounded-md ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-800 text-slate-400'}">
-                                ${(parseMileageValue(car.mileage) / 1000).toFixed(0)}kkm
-                            </span>
+
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <!-- Przyciski strzałek do układania kolejności w górę i w dół -->
+                                <div class="flex items-center space-x-0.5 no-print">
+                                    <button 
+                                        type="button" 
+                                        onclick="moveCarUp('${car.id}', event)" 
+                                        ${isFirst ? 'disabled' : ''} 
+                                        class="p-1 rounded text-[10px] ${isFirst ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-blue-400 hover:bg-slate-800'} transition" 
+                                        title="Przesuń wyżej w garażu"
+                                    >
+                                        <i class="fa-solid fa-chevron-up"></i>
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onclick="moveCarDown('${car.id}', event)" 
+                                        ${isLast ? 'disabled' : ''} 
+                                        class="p-1 rounded text-[10px] ${isLast ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-blue-400 hover:bg-slate-800'} transition" 
+                                        title="Przesuń niżej w garażu"
+                                    >
+                                        <i class="fa-solid fa-chevron-down"></i>
+                                    </button>
+                                </div>
+
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded-md ${isSelected ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-800 text-slate-400'}">
+                                    ${(parseMileageValue(car.mileage) / 1000).toFixed(0)}kkm
+                                </span>
+                            </div>
                         </div>
+
                         ${car.owner ? `
-                            <div class="mt-1 text-[11px] text-indigo-300 flex items-center gap-1.5">
+                            <div class="mt-1 text-[11px] text-indigo-300 flex items-center gap-1.5 pl-5">
                                 <i class="fa-solid fa-user text-[9px]"></i>
                                 <span class="truncate">${escapeHtml(car.owner)}</span>
                             </div>
                         ` : ''}
-                        <div class="mt-1.5 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                            <span class="truncate max-w-[140px]">${escapeHtml(car.vin || 'Brak VIN')}</span>
+
+                        <div class="mt-1.5 flex items-center justify-between text-[11px] text-slate-400 font-mono pl-5">
+                            <span class="truncate max-w-[130px]">${escapeHtml(car.vin || 'Brak VIN')}</span>
                             <span class="text-slate-500 font-sans flex items-center gap-1.5">
-                                ${activeTodosCount > 0 ? `<span class="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[10px] font-semibold" title="Pozycje do zrobienia">${activeTodosCount} ust.</span>` : ''}
+                                ${activeTodosCount > 0 ? `<span class="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[10px] font-semibold" title="Zadania do zrobienia">${activeTodosCount} ust.</span>` : ''}
                                 <span>${recordsCount} wpisów</span>
                                 <i class="fa-solid fa-chevron-right text-[9px] ${isSelected ? 'text-blue-400' : 'text-slate-600'}"></i>
                             </span>
@@ -1652,11 +2681,9 @@
             }).join('');
         };
 
-        // Wybór samochodu z listy (kliknięcie otwiera kartę pojazdu)
         window.selectCar = function(carId) {
             selectedCarId = carId;
             renderAll();
-            // Na ekranach mobilnych płynnie przewiń do karty wybranego pojazdu
             if (window.innerWidth < 1024) {
                 const detailsEl = document.getElementById('car-details-view');
                 if (detailsEl) {
@@ -1664,14 +2691,13 @@
                 }
             }
         };
-        // Zamknięcie widoku karty pojazdu i powrót do pulpitu głównego
+
         window.closeCarDetails = function() {
             selectedCarId = null;
             renderAll();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        // Renderowanie szczegółów wybranego samochodu
         function renderSelectedCarDetails() {
             const emptyState = document.getElementById('empty-garage-state');
             const detailsView = document.getElementById('car-details-view');
@@ -1685,10 +2711,10 @@
 
                 if (cars.length > 0) {
                     emptyTitle.textContent = 'Wybierz samochód ze swojego garażu';
-                    emptyDesc.textContent = 'Kliknij na wybrane auto na liście w sekcji "Twój Garaż", aby wyświetlić jego kartę pojazdu, numery filtrów oraz pełną historię serwisową.';
+                    emptyDesc.textContent = 'Kliknij na auto na liście w lewym panelu, aby wyświetlić jego kartę pojazdu, numery filtrów oraz wspólną chronologiczną historię serwisową.';
                 } else {
-                    emptyTitle.textContent = 'Twój garaż jest pusty';
-                    emptyDesc.textContent = 'Dodaj swój pierwszy samochód za pomocą przycisku poniżej, aby prowadzić książkę serwisową, kontrolować interwały wymian oleju i zapisywać numery części.';
+                    emptyTitle.textContent = 'Ten garaż jest pusty';
+                    emptyDesc.textContent = 'Dodaj pierwszy samochód za pomocą przycisku powyżej, aby prowadzić książkę serwisową i zapisywać numery części.';
                 }
                 renderRemindersPanel();
                 return;
@@ -1697,7 +2723,6 @@
             emptyState.classList.add('hidden');
             detailsView.classList.remove('hidden');
 
-            // Obliczenie najwyższego przebiegu (z karty auta lub z najnowszego wpisu serwisowego)
             let maxMileage = parseMileageValue(car.mileage);
             if (Array.isArray(car.records)) {
                 car.records.forEach(r => {
@@ -1706,7 +2731,6 @@
                 });
             }
 
-            // Ustawienie danych głównych i danych do druku
             document.getElementById('detail-car-name').textContent = car.name || 'Pojazd';
             document.getElementById('detail-car-vin').textContent = car.vin || 'Brak numeru VIN';
             document.getElementById('detail-car-mileage').textContent = formatMileage(maxMileage);
@@ -1728,14 +2752,12 @@
                 plateEl.classList.add('hidden');
             }
 
-            // Dane nagłówka do wydruku
             document.getElementById('print-car-name').textContent = car.name || 'Pojazd';
             document.getElementById('print-car-vin').textContent = car.vin || '-';
             document.getElementById('print-car-owner').textContent = car.owner || 'Nie wpisano';
             document.getElementById('print-car-mileage').textContent = formatMileage(maxMileage);
             document.getElementById('print-date').textContent = new Date().toLocaleDateString('pl-PL');
 
-            // Numery części / filtrów
             const parts = car.parts || {};
             document.getElementById('part-oil').textContent = parts.oilFilter || 'Brak';
             document.getElementById('part-air').textContent = parts.airFilter || 'Brak';
@@ -1755,7 +2777,9 @@
             renderRecords();
         }
 
-        // Obliczanie i wyświetlanie paska interwału kilometrowego wymiany oleju
+        // ============================================================================
+        // INTERWAŁ WYMIANY OLEJU
+        // ============================================================================
         function computeOilIntervalInfo(car, currentMaxMileage) {
             const intervalKm = parseInt(car.oilIntervalKm, 10) || 15000;
             const records = Array.isArray(car.records) ? car.records : [];
@@ -1811,7 +2835,6 @@
             const nextKkm = (info.nextOilMileage / 1000).toFixed(info.nextOilMileage % 1000 === 0 ? 0 : 1);
 
             subtextEl.innerHTML = `Ostatni serwis olejowy: <strong class="text-slate-200 font-mono">${lastKkm}kkm</strong> (${escapeHtml(info.lastOilDate)}) • Następna wymiana przy: <strong class="text-amber-400 font-mono">${nextKkm}kkm (${info.nextOilMileage.toLocaleString('pl-PL')} km)</strong> • Przejechano: <strong class="text-slate-200 font-mono">${info.drivenSinceLast.toLocaleString('pl-PL')} km</strong>`;
-
             barEl.style.width = `${info.percentUsed}%`;
 
             if (info.remainingKm <= 0) {
@@ -1829,7 +2852,6 @@
             }
         }
 
-        // Szybka aktualizacja przebiegu auta z poziomu paska interwału
         window.promptUpdateMileage = function() {
             const car = cars.find(c => c.id === selectedCarId);
             if (!car) return;
@@ -1851,17 +2873,15 @@
                 return;
             }
             const updatedCar = { ...car, mileage: newKm, updatedAt: Date.now() };
-            if (!currentUser || !db) {
-                const idx = cars.findIndex(c => c.id === car.id);
-                if (idx >= 0) cars[idx] = updatedCar;
-            }
             await persistCarToFirestore(updatedCar);
             closeMileageModal();
             renderAll();
             showToast(`Zaktualizowano przebieg do ${formatMileage(newKm)}`);
         };
 
-        // OBSŁUGA LISTY "DO ZROBIENIA PRZY NASTĘPNYM SERWISIE" (SCHOWEK USTEREK)
+        // ============================================================================
+        // SCHOWEK USTEREK ("DO ZROBIENIA")
+        // ============================================================================
         window.renderTodoList = function() {
             const car = cars.find(c => c.id === selectedCarId);
             if (!car) return;
@@ -1909,9 +2929,9 @@
                             </div>
                         </label>
                         <div class="flex items-center gap-1.5 shrink-0">
-                            <button type="button" onclick="convertTodoToRecord('${item.id}')" class="px-2.5 py-1 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-medium transition flex items-center gap-1" title="Utwórz wpis serwisowy z tej pozycji">
+                            <button type="button" onclick="convertTodoToRecord('${item.id}')" class="px-2.5 py-1 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-medium transition flex items-center gap-1" title="Utwórz wpis z tej pozycji">
                                 <i class="fa-solid fa-screwdriver-wrench text-[10px]"></i>
-                                <span class="hidden sm:inline">Przenieś do wpisu</span>
+                                <span class="hidden sm:inline">Do wpisu</span>
                             </button>
                             <button type="button" onclick="deleteTodoItem('${item.id}')" class="p-1.5 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-800 transition text-xs" title="Usuń z listy">
                                 <i class="fa-solid fa-trash-can"></i>
@@ -1943,15 +2963,10 @@
             const updatedTodos = [newTodo, ...(Array.isArray(car.todos) ? car.todos : [])];
             const updatedCar = { ...car, todos: updatedTodos, updatedAt: Date.now() };
 
-            if (!currentUser || !db) {
-                const idx = cars.findIndex(c => c.id === car.id);
-                if (idx >= 0) cars[idx] = updatedCar;
-            }
-
             input.value = '';
             await persistCarToFirestore(updatedCar);
             renderAll();
-            showToast('Dodano pozycję do listy "Do zrobienia"');
+            showToast('Dodano pozycję do schowka usterek');
         };
 
         window.toggleTodoItem = async function(todoId) {
@@ -1960,11 +2975,6 @@
 
             const updatedTodos = (car.todos || []).map(t => t.id === todoId ? { ...t, done: !t.done } : t);
             const updatedCar = { ...car, todos: updatedTodos, updatedAt: Date.now() };
-
-            if (!currentUser || !db) {
-                const idx = cars.findIndex(c => c.id === car.id);
-                if (idx >= 0) cars[idx] = updatedCar;
-            }
 
             await persistCarToFirestore(updatedCar);
             renderAll();
@@ -1976,11 +2986,6 @@
 
             const updatedTodos = (car.todos || []).filter(t => t.id !== todoId);
             const updatedCar = { ...car, todos: updatedTodos, updatedAt: Date.now() };
-
-            if (!currentUser || !db) {
-                const idx = cars.findIndex(c => c.id === car.id);
-                if (idx >= 0) cars[idx] = updatedCar;
-            }
 
             await persistCarToFirestore(updatedCar);
             renderAll();
@@ -2000,8 +3005,9 @@
             document.getElementById('input-record-title').value = todo.text;
         };
 
-        // Wyliczanie przypomnień o przeglądach dla wszystkich aut:
-        // Dla każdego auta bierzemy WYŁĄCZNIE JEDEN NAJNOWSZY przegląd / serwis olejowy i od niego liczymy rok (-14 dni)
+        // ============================================================================
+        // PRZYPOMNIENIA O PRZEGLĄDACH (OIL + INSPECTION WSPÓLNIE)
+        // ============================================================================
         function computeVehicleReminders() {
             const now = new Date();
             now.setHours(0, 0, 0, 0);
@@ -2011,8 +3017,6 @@
                 const records = Array.isArray(car.records) ? car.records : [];
                 const overrides = car.reminderOverrides || {};
 
-                // Bierzemy pod uwagę wszystkie przeglądy / serwisy olejowe (OIL lub INSPECTION) w danym aucie
-                // i sortujemy je od najnowszego (po dacie, a w razie remisu po przebiegu)
                 const serviceRecords = records
                     .filter(r => (r.type === 'OIL' || r.type === 'INSPECTION') && parseRecordDateString(r.date))
                     .sort((a, b) => {
@@ -2023,18 +3027,15 @@
 
                 if (serviceRecords.length === 0) return;
 
-                // Wybieramy TYLKO JEDEN NAJNOWSZY przegląd / serwis w tym aucie
                 const latestRec = serviceRecords[0];
                 const remKey = `LATEST_${latestRec.id}`;
                 const override = overrides[remKey] || {};
 
-                // Jeśli użytkownik usunął / odrzucił przypomnienie dla tego najnowszego przeglądu, pomijamy je
                 if (override.dismissed) return;
 
                 const lastDate = parseRecordDateString(latestRec.date);
                 if (!lastDate) return;
 
-                // Domyślny termin kolejnego przeglądu: +1 rok od ostatniego (najnowszego) przeglądu
                 let dueDate = new Date(lastDate.getFullYear() + 1, lastDate.getMonth(), lastDate.getDate());
                 let isRescheduled = false;
 
@@ -2049,11 +3050,8 @@
                 dueDate.setHours(0, 0, 0, 0);
                 const diffMs = dueDate.getTime() - now.getTime();
                 const daysLeft = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
-                // Aktywne przypomnienie pojawia się na 14 dni (2 tygodnie) przed upływem roku (lub jeśli jest już po terminie / przeniesione)
                 const isWithinTwoWeeks = daysLeft <= 14;
 
-                // Sprawdzenie interwału kilometrowego dla tego auta
                 let maxKm = parseMileageValue(car.mileage);
                 records.forEach(r => {
                     const rm = parseMileageValue(r.mileage);
@@ -2068,7 +3066,7 @@
                     carVin: car.vin,
                     remKey,
                     categoryType: latestRec.type,
-                    categoryLabel: latestRec.type === 'INSPECTION' ? 'Przegląd okresowy' : 'Przegląd / Serwis olejowy',
+                    categoryLabel: latestRec.type === 'INSPECTION' ? 'Przegląd okresowy' : 'Serwis olejowy / filtry',
                     lastRecordTitle: latestRec.title,
                     lastRecordDateStr: latestRec.date,
                     lastRecordMileageStr: `${(parseMileageValue(latestRec.mileage) / 1000).toFixed(0)}kkm`,
@@ -2080,13 +3078,11 @@
                     isWithinTwoWeeks: isWithinTwoWeeks || isMileageDueSoon,
                     isMileageDueSoon,
                     oilRemainingKm: oilInfo.hasOilRecord ? oilInfo.remainingKm : null,
-                    oilNextMileageKm: oilInfo.hasOilRecord ? oilInfo.nextOilMileage : null,
                     isRescheduled,
                     note: override.note || ''
                 });
             });
 
-            // Sortuj od najpilniejszych (najmniej dni pozostało)
             reminders.sort((a, b) => a.daysLeft - b.daysLeft);
             return reminders;
         }
@@ -2103,7 +3099,6 @@
             if (!listEl) return;
 
             const allReminders = computeVehicleReminders();
-            // Przypomnienia spełniające warunek <= 14 dni przed upływem roku (lub ręcznie przełożone przez użytkownika)
             const activeAlerts = allReminders.filter(r => r.isWithinTwoWeeks || r.isRescheduled);
 
             if (badgeCountEl) {
@@ -2128,7 +3123,7 @@
                             <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
                             <div>
                                 <div class="font-semibold text-slate-200">Brak pilnych przeglądów w najbliższych 2 tygodniach</div>
-                                <div>Wszystkie Twoje samochody mają aktualne badania i serwisy (powiadomienie pojawi się automatycznie na 14 dni przed upływem roku od ostatniego przeglądu).</div>
+                                <div>Wszystkie samochody w tym garażu mają aktualne badania i serwisy (alert na 14 dni przed upływem roku).</div>
                             </div>
                         </div>
                         ${allReminders.length > 0 ? `
@@ -2162,14 +3157,6 @@
                     ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30"><i class="fa-solid fa-calendar-day mr-1"></i>Przełożony termin</span>`
                     : '';
 
-                const mileageAlertTag = rem.oilRemainingKm !== null
-                    ? (rem.oilRemainingKm <= 0
-                        ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/40"><i class="fa-solid fa-gauge-high mr-1"></i>Interwał oleju przekroczony o ${Math.abs(rem.oilRemainingKm).toLocaleString('pl-PL')} km!</span>`
-                        : (rem.oilRemainingKm <= 1500
-                            ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40"><i class="fa-solid fa-oil-can mr-1"></i>Wymiana oleju za ${rem.oilRemainingKm.toLocaleString('pl-PL')} km</span>`
-                            : `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">Do wymiany oleju: ${rem.oilRemainingKm.toLocaleString('pl-PL')} km</span>`))
-                    : '';
-
                 return `
                     <div class="rounded-xl p-4 border ${cardBorder} bg-slate-950/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div class="space-y-1.5">
@@ -2180,13 +3167,12 @@
                                 <span class="text-xs text-slate-400">•</span>
                                 <span class="text-xs font-semibold text-slate-200">${escapeHtml(rem.categoryLabel)}</span>
                                 ${statusBadge}
-                                ${mileageAlertTag}
                                 ${rescheduledTag}
                             </div>
 
                             <div class="text-xs text-slate-400 flex flex-wrap items-center gap-x-4 gap-y-1">
-                                <span>Ostatni przegląd: <strong class="text-slate-300 font-mono">${escapeHtml(rem.lastRecordDateStr)}</strong> przy <strong class="text-slate-300 font-mono">${escapeHtml(rem.lastRecordMileageStr || '')}</strong> (${escapeHtml(rem.lastRecordTitle)})</span>
-                                <span>Termin kolejnego przeglądu: <strong class="text-amber-400 font-mono">${escapeHtml(rem.dueDateStr)}</strong></span>
+                                <span>Ostatni wpis: <strong class="text-slate-300 font-mono">${escapeHtml(rem.lastRecordDateStr)}</strong> przy <strong class="text-slate-300 font-mono">${escapeHtml(rem.lastRecordMileageStr || '')}</strong> (${escapeHtml(rem.lastRecordTitle)})</span>
+                                <span>Termin kolejnego badania/serwisu: <strong class="text-amber-400 font-mono">${escapeHtml(rem.dueDateStr)}</strong></span>
                             </div>
 
                             ${rem.note ? `<div class="text-[11px] text-purple-300 italic"><i class="fa-regular fa-comment-dots mr-1"></i>Notatka: ${escapeHtml(rem.note)}</div>` : ''}
@@ -2207,11 +3193,10 @@
             }).join('');
         };
 
-        // Otwieranie modala przeniesienia przypomnienia na inny termin
         window.openRescheduleModal = function(carId, remKey, currentDueIso, label, currentNote = '') {
             activeRescheduleContext = { carId, remKey };
             document.getElementById('reschedule-car-label').textContent = label;
-            document.getElementById('reschedule-current-due').textContent = `Obecny wyznaczony termin: ${currentDueIso.split('-').reverse().join('.')}`;
+            document.getElementById('reschedule-current-due').textContent = `Obecny termin: ${currentDueIso.split('-').reverse().join('.')}`;
             document.getElementById('input-reschedule-date').value = currentDueIso;
             document.getElementById('input-reschedule-note').value = currentNote || '';
             document.getElementById('reschedule-modal').classList.remove('hidden');
@@ -2222,7 +3207,6 @@
             activeRescheduleContext = null;
         };
 
-        // Szybkie dodanie dni (+7, +14, +30) w modalu zmiany terminu
         window.applyQuickPostpone = function(daysToAdd) {
             const dateInput = document.getElementById('input-reschedule-date');
             let baseDate = dateInput.value ? new Date(dateInput.value) : new Date();
@@ -2232,7 +3216,6 @@
             dateInput.value = formatDateToInputIso(baseDate);
         };
 
-        // Zapisanie nowego terminu przypomnienia
         window.saveRescheduledReminder = async function(e) {
             e.preventDefault();
             if (!activeRescheduleContext) return;
@@ -2258,24 +3241,18 @@
                 updatedAt: Date.now()
             };
 
-            if (!currentUser || !db) {
-                const idx = cars.findIndex(c => c.id === carId);
-                if (idx >= 0) cars[idx] = updatedCar;
-            }
-
             await persistCarToFirestore(updatedCar);
             closeRescheduleModal();
             renderAll();
             showToast(`Przeniesiono przypomnienie na ${newDateIso.split('-').reverse().join('.')}`);
         };
 
-        // Usunięcie / odrzucenie przypomnienia z potwierdzeniem
         window.dismissReminder = function(carId, remKey) {
             const car = cars.find(c => c.id === carId);
             if (!car) return;
 
             document.getElementById('confirm-title').textContent = 'Usunąć to przypomnienie?';
-            document.getElementById('confirm-desc').textContent = 'To przypomnienie o przeglądzie zostanie usunięte z listy powiadomień (wpis w historii pojazdu pozostanie bez zmian).';
+            document.getElementById('confirm-desc').textContent = 'Przypomnienie zniknie z listy powiadomień, wpis w historii auta pozostanie nienaruszony.';
             const btn = document.getElementById('confirm-action-btn');
             btn.onclick = async () => {
                 const updatedOverrides = { ...(car.reminderOverrides || {}) };
@@ -2291,11 +3268,6 @@
                     updatedAt: Date.now()
                 };
 
-                if (!currentUser || !db) {
-                    const idx = cars.findIndex(c => c.id === carId);
-                    if (idx >= 0) cars[idx] = updatedCar;
-                }
-
                 await persistCarToFirestore(updatedCar);
                 closeConfirmModal();
                 renderAll();
@@ -2304,7 +3276,9 @@
             document.getElementById('confirm-modal').classList.remove('hidden');
         };
 
-        // Czyszczenie wyszukiwarki w historii napraw
+        // ============================================================================
+        // HISTORIA SERWISOWA I PRZEGLĄDY (WSPÓLNA CHRONOLOGICZNA OŚ CZASU)
+        // ============================================================================
         window.clearRecordSearch = function() {
             const input = document.getElementById('search-record-input');
             if (input) {
@@ -2313,7 +3287,6 @@
             }
         };
 
-        // Pomocnicza funkcja sprawdzająca czy dany filtr był wymieniony w danym wpisie
         function getReplacedFiltersForRecord(rec, carParts) {
             const result = [];
             const fr = rec.filtersReplaced || null;
@@ -2332,7 +3305,6 @@
             return result;
         }
 
-        // Renderowanie historii serwisowej i napraw dla wybranego pojazdu
         window.renderRecords = function() {
             const car = cars.find(c => c.id === selectedCarId);
             if (!car) return;
@@ -2348,19 +3320,19 @@
             }
 
             const listEl = document.getElementById('records-list');
-
             const allRecords = Array.isArray(car.records) ? [...car.records] : [];
-            // Sortowanie po przebiegu malejąco (najnowsze na górze)
-            allRecords.sort((a, b) => parseMileageValue(b.mileage) - parseMileageValue(a.mileage));
 
-            // Obliczanie statystyk
+            // Wspólne chronologiczne sortowanie wszystkich wpisów (serwisów, przeglądów i napraw)
+            const sortedRecords = sortRecordsChronologically(allRecords, recordsSortOrder);
+
+            // Statystyki
             document.getElementById('stat-records-count').textContent = allRecords.length;
 
             const oilRecords = allRecords.filter(r => r.type === 'OIL');
             if (oilRecords.length > 0) {
-                const lastOil = oilRecords[0];
-                const kkm = (parseMileageValue(lastOil.mileage) / 1000).toFixed(0);
-                document.getElementById('stat-last-oil').textContent = `${lastOil.date} (${kkm}kkm)`;
+                const latestOil = sortRecordsChronologically(oilRecords, 'DESC')[0];
+                const kkm = (parseMileageValue(latestOil.mileage) / 1000).toFixed(0);
+                document.getElementById('stat-last-oil').textContent = `${latestOil.date} (${kkm}kkm)`;
             } else {
                 document.getElementById('stat-last-oil').textContent = 'Brak wpisów';
             }
@@ -2368,8 +3340,8 @@
             const totalCost = allRecords.reduce((acc, r) => acc + (parseFloat(r.cost) || 0), 0);
             document.getElementById('stat-total-cost').textContent = `${totalCost.toLocaleString('pl-PL')} PLN`;
 
-            // Filtrowanie po kategorii oraz wyszukiwarce tekstowej
-            const filtered = allRecords.filter(r => {
+            // Filtrowanie (domyślnie ALL pokazuje wszystkie wpisy razem na jednej osi czasu)
+            const filtered = sortedRecords.filter(r => {
                 if (filterType !== 'ALL' && r.type !== filterType) return false;
                 if (!searchQuery) return true;
 
@@ -2390,7 +3362,7 @@
             if (filtered.length === 0) {
                 listEl.innerHTML = `
                     <div class="text-center py-8 px-4 bg-slate-950/40 border border-dashed border-slate-800 rounded-xl text-slate-400 text-xs">
-                        ${searchQuery ? `Brak wpisów pasujących do frazy <strong>"${escapeHtml(searchQuery)}"</strong>.` : `Brak wpisów w tej kategorii. Kliknij <strong>"Dodaj wpis / naprawę"</strong>, aby zarejestrować czynność serwisową.`}
+                        ${searchQuery ? `Brak wpisów pasujących do frazy <strong>"${escapeHtml(searchQuery)}"</strong>.` : `Brak wpisów w tej kategorii. Kliknij <strong>"Dodaj wpis"</strong>, aby zarejestrować serwis, naprawę lub przegląd.`}
                     </div>
                 `;
                 return;
@@ -2403,20 +3375,20 @@
                 const kkmFormatted = kmNum ? `${(kmNum / 1000).toFixed(kmNum % 1000 === 0 ? 0 : 1)}kkm` : rec.mileage;
                 const fullKmFormatted = kmNum ? `${kmNum.toLocaleString('pl-PL')} km` : '';
 
+                // Oznaczenia graficzne kategorii wpisów
                 let badgeHtml = '';
                 if (rec.type === 'OIL') {
                     badgeHtml = `<span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30 print-badge"><i class="fa-solid fa-oil-can mr-1 no-print"></i>Serwis Olejowy</span>`;
-                } else if (rec.type === 'REPAIR') {
-                    badgeHtml = `<span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 print-badge"><i class="fa-solid fa-wrench mr-1 no-print"></i>Naprawa</span>`;
+                } else if (rec.type === 'INSPECTION') {
+                    badgeHtml = `<span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 print-badge"><i class="fa-solid fa-clipboard-check mr-1 no-print"></i>Przegląd Okresowy</span>`;
                 } else {
-                    badgeHtml = `<span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 print-badge"><i class="fa-solid fa-clipboard-check mr-1 no-print"></i>Przegląd / Inne</span>`;
+                    badgeHtml = `<span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 print-badge"><i class="fa-solid fa-wrench mr-1 no-print"></i>Naprawa</span>`;
                 }
 
                 const costHtml = rec.cost && parseFloat(rec.cost) > 0 
                     ? `<span class="font-mono text-xs font-bold text-emerald-400 print-text-dark bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg print-badge">${parseFloat(rec.cost).toLocaleString('pl-PL')} PLN</span>` 
                     : '';
 
-                // Wyświetlenie odhaczonych filtrów ze znacznikami ("ptaszkami")
                 const replacedFilters = getReplacedFiltersForRecord(rec, carParts);
                 const replacedFiltersHtml = replacedFilters.length > 0 ? `
                     <div class="flex flex-wrap items-center gap-1.5 pt-1">
@@ -2475,7 +3447,6 @@
             }).join('');
         };
 
-        // Kopiowanie numeru VIN oraz numerów części do schowka
         function copyTextToClipboard(text, label) {
             const tempInput = document.createElement('textarea');
             tempInput.value = text;
@@ -2500,12 +3471,11 @@
             }
         };
 
-        // Drukowanie historii pojedynczego samochodu
         window.printVehicleHistory = function() {
             window.print();
         };
 
-        // Generowanie i pobieranie pliku PDF z historią wybranego samochodu
+        // GENEROWANIE I POBIERANIE PLIKU PDF (WSPÓLNA CHRONOLOGIA)
         window.downloadVehiclePdf = async function() {
             const car = cars.find(c => c.id === selectedCarId);
             if (!car) return;
@@ -2520,16 +3490,16 @@
             try {
                 let maxMileage = parseMileageValue(car.mileage);
                 const allRecords = Array.isArray(car.records) ? [...car.records] : [];
-                allRecords.sort((a, b) => parseMileageValue(b.mileage) - parseMileageValue(a.mileage));
-                allRecords.forEach(r => {
+                const sortedRecords = sortRecordsChronologically(allRecords, 'DESC');
+
+                sortedRecords.forEach(r => {
                     const rm = parseMileageValue(r.mileage);
                     if (rm > maxMileage) maxMileage = rm;
                 });
 
                 const parts = car.parts || {};
-                const totalCost = allRecords.reduce((acc, r) => acc + (parseFloat(r.cost) || 0), 0);
+                const totalCost = sortedRecords.reduce((acc, r) => acc + (parseFloat(r.cost) || 0), 0);
 
-                // Budujemy czysty, elegancki kontener dokumentu PDF
                 const pdfWrapper = document.createElement('div');
                 pdfWrapper.style.padding = '24px';
                 pdfWrapper.style.fontFamily = 'Inter, Arial, sans-serif';
@@ -2537,12 +3507,12 @@
                 pdfWrapper.style.backgroundColor = '#ffffff';
                 pdfWrapper.style.width = '750px';
 
-                const recordsHtml = allRecords.length === 0
+                const recordsHtml = sortedRecords.length === 0
                     ? `<div style="padding: 16px; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; color: #64748b; font-size: 12px;">Brak zarejestrowanych wpisów serwisowych.</div>`
-                    : allRecords.map(rec => {
+                    : sortedRecords.map(rec => {
                         const kmNum = parseMileageValue(rec.mileage);
                         const kkmFormatted = kmNum ? `${(kmNum / 1000).toFixed(kmNum % 1000 === 0 ? 0 : 1)}kkm (${kmNum.toLocaleString('pl-PL')} km)` : rec.mileage;
-                        const typeLabel = rec.type === 'OIL' ? 'Serwis Olejowy' : (rec.type === 'REPAIR' ? 'Naprawa' : 'Przegląd / Inne');
+                        const typeLabel = rec.type === 'OIL' ? 'Serwis Olejowy' : (rec.type === 'INSPECTION' ? 'Przegląd Okresowy' : 'Naprawa');
                         const replacedFilters = getReplacedFiltersForRecord(rec, parts);
 
                         return `
@@ -2617,8 +3587,8 @@
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h2 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">Historia Serwisowa i Naprawy (${allRecords.length} wpisów)</h2>
-                        <div style="font-size: 12px; font-family: monospace; color: #334155;">Łączne wpisane koszty: <strong>${totalCost.toLocaleString('pl-PL')} PLN</strong></div>
+                        <h2 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">Historia Serwisowa i Przeglądy (${sortedRecords.length} wpisów)</h2>
+                        <div style="font-size: 12px; font-family: monospace; color: #334155;">Łączne koszty: <strong>${totalCost.toLocaleString('pl-PL')} PLN</strong></div>
                     </div>
 
                     <div>${recordsHtml}</div>
@@ -2648,7 +3618,9 @@
             }
         };
 
-        // Obsługa modala Dodawania / Edycji samochodu
+        // ============================================================================
+        // MODALE: DODAWANIE / EDYCJA AUTA ORAZ WPISU
+        // ============================================================================
         window.openCarModal = function(editMode = false) {
             isEditingCar = editMode;
             const modal = document.getElementById('car-modal');
@@ -2699,6 +3671,8 @@
                 extra: document.getElementById('input-part-extra').value.trim()
             };
 
+            const activeId = getActiveGarageUserId();
+
             if (isEditingCar && selectedCarId) {
                 const existing = cars.find(c => c.id === selectedCarId);
                 if (!existing) return;
@@ -2711,18 +3685,19 @@
                     oilIntervalKm,
                     plate,
                     parts,
+                    order: typeof existing.order === 'number' ? existing.order : 0,
+                    userId: existing.userId || activeId,
                     updatedAt: Date.now()
                 };
-                if (!currentUser || !db) {
-                    const idx = cars.findIndex(c => c.id === selectedCarId);
-                    if (idx >= 0) cars[idx] = updatedCar;
-                }
+
                 await persistCarToFirestore(updatedCar);
                 renderAll();
-                showToast('Zaktualizowano kartę pojazdu');
+                showToast('Zaktualizowano kartę pojazdu (kolejność zachowana)');
             } else {
                 const newCar = {
                     id: 'car-' + Date.now(),
+                    userId: activeId,
+                    order: cars.length,
                     name,
                     vin,
                     owner,
@@ -2732,12 +3707,10 @@
                     parts,
                     todos: [],
                     records: [],
+                    createdAt: Date.now(),
                     updatedAt: Date.now()
                 };
                 selectedCarId = newCar.id;
-                if (!currentUser || !db) {
-                    cars.unshift(newCar);
-                }
                 await persistCarToFirestore(newCar);
                 showToast('Dodano nowy pojazd do garażu');
             }
@@ -2745,39 +3718,33 @@
             closeCarModal();
         };
 
-        // Obsługa modala Dodawania / Edycji wpisu serwisowego lub naprawy
         window.toggleAllFilters = function(state = true) {
             document.getElementById('chk-filter-oil').checked = state;
             document.getElementById('chk-filter-air').checked = state;
             document.getElementById('chk-filter-cabin').checked = state;
             document.getElementById('chk-filter-fuel').checked = state;
-            syncFilterCheckboxesToParts();
-        };
-
-        window.syncFilterCheckboxesToParts = function() {
-            // Funkcja może opcjonalnie aktualizować podpowiedź lub zostawić pole na dodatkowe części
         };
 
         window.prefillRecordTitle = function(type) {
             const titleInput = document.getElementById('input-record-title');
 
             if (type === 'OIL') {
-                if (!titleInput.value || titleInput.value === 'Naprawa mechaniczna' || titleInput.value === 'Przegląd techniczny / serwisowy') {
-                    titleInput.value = 'Wymiana oleju';
+                if (!titleInput.value || titleInput.value === 'Naprawa mechaniczna' || titleInput.value === 'Przegląd okresowy / badanie') {
+                    titleInput.value = 'Wymiana oleju i filtrów';
                 }
                 if (!editingRecordId) {
                     document.getElementById('chk-filter-oil').checked = true;
                 }
             } else if (type === 'REPAIR') {
-                if (titleInput.value === 'Wymiana oleju' || titleInput.value === 'Wymiana oleju i filtrów' || titleInput.value === 'Przegląd techniczny / serwisowy') {
+                if (titleInput.value === 'Wymiana oleju i filtrów' || titleInput.value === 'Przegląd okresowy / badanie') {
                     titleInput.value = '';
                 }
                 if (!editingRecordId) {
                     toggleAllFilters(false);
                 }
             } else if (type === 'INSPECTION') {
-                if (titleInput.value === 'Wymiana oleju' || titleInput.value === 'Wymiana oleju i filtrów' || !titleInput.value) {
-                    titleInput.value = 'Przegląd techniczny / serwisowy';
+                if (!titleInput.value || titleInput.value === 'Wymiana oleju i filtrów' || titleInput.value === 'Naprawa mechaniczna') {
+                    titleInput.value = 'Okresowe badanie techniczne';
                 }
             }
         };
@@ -2791,7 +3758,6 @@
             const titleEl = document.getElementById('record-modal-title');
             document.getElementById('record-form').reset();
 
-            // Ustawienie numerów katalogowych filtrów przy checkboxach dla wybranego auta
             const parts = car.parts || {};
             document.getElementById('chk-label-oil').textContent = parts.oilFilter ? `Nr por.: ${parts.oilFilter}` : 'Brak nr w karcie';
             document.getElementById('chk-label-air').textContent = parts.airFilter ? `Nr por.: ${parts.airFilter}` : 'Brak nr w karcie';
@@ -2801,7 +3767,7 @@
             if (recordId) {
                 const rec = (car.records || []).find(r => r.id === recordId);
                 if (!rec) return;
-                titleEl.innerHTML = `<i class="fa-solid fa-pen text-blue-400"></i> Edytuj Wpis Serwisowy`;
+                titleEl.innerHTML = `<i class="fa-solid fa-pen text-blue-400"></i> Edytuj Wpis Serwisowy / Przegląd`;
                 const radio = document.querySelector(`input[name="record-type"][value="${rec.type || 'REPAIR'}"]`);
                 if (radio) radio.checked = true;
                 document.getElementById('input-record-title').value = rec.title || '';
@@ -2811,7 +3777,6 @@
                 document.getElementById('input-record-parts').value = rec.partsUsed || '';
                 document.getElementById('input-record-desc').value = rec.description || '';
 
-                // Odtworzenie zaznaczonych ptaszków filtrów
                 const fr = rec.filtersReplaced;
                 if (fr) {
                     document.getElementById('chk-filter-oil').checked = !!fr.oil;
@@ -2826,11 +3791,12 @@
                     document.getElementById('chk-filter-fuel').checked = detected.some(d => d.label === 'Filtr paliwa');
                 }
             } else {
-                titleEl.innerHTML = `<i class="fa-solid fa-screwdriver-wrench text-emerald-400"></i> Dodaj Wpis Serwisowy / Naprawę`;
+                titleEl.innerHTML = `<i class="fa-solid fa-screwdriver-wrench text-emerald-400"></i> Dodaj Wpis Serwisowy / Przegląd`;
                 const now = new Date();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const year = now.getFullYear();
-                document.getElementById('input-record-date').value = `${month}.${year}`;
+                const d = String(now.getDate()).padStart(2, '0');
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const y = now.getFullYear();
+                document.getElementById('input-record-date').value = `${d}.${m}.${y}`;
                 document.getElementById('input-record-mileage').value = car.mileage || '';
                 toggleAllFilters(false);
                 document.getElementById('chk-filter-oil').checked = true;
@@ -2895,11 +3861,11 @@
                     cost,
                     filtersReplaced,
                     partsUsed,
-                    description
+                    description,
+                    createdAt: Date.now()
                 });
             }
 
-            // Aktualizacja przebiegu głównego auta jeśli nowy wpis ma wyższy przebieg
             const newCarMileage = Math.max(parseMileageValue(car.mileage), parsedMileage);
 
             const updatedCar = {
@@ -2909,34 +3875,30 @@
                 updatedAt: Date.now()
             };
 
-            if (!currentUser || !db) {
-                const carIdx = cars.findIndex(c => c.id === car.id);
-                if (carIdx >= 0) cars[carIdx] = updatedCar;
-            }
-
             await persistCarToFirestore(updatedCar);
             closeRecordModal();
-            showToast(editingRecordId ? 'Zaktualizowano wpis serwisowy' : 'Dodano nowy wpis do książki serwisowej');
+            showToast(editingRecordId ? 'Zaktualizowano wpis' : 'Dodano nowy wpis do wspólnej osi czasu');
         };
 
-        // Obsługa usuwania auta lub pojedynczego wpisu
         window.confirmDeleteCar = function() {
             const car = cars.find(c => c.id === selectedCarId);
             if (!car) return;
 
             document.getElementById('confirm-title').textContent = `Usunąć pojazd ${car.name}?`;
-            document.getElementById('confirm-desc').textContent = 'Wszystkie przypisane wpisy serwisowe oraz numery części tego pojazdu zostaną bezpowrotnie usunięte.';
+            document.getElementById('confirm-desc').textContent = 'Wszystkie przypisane wpisy serwisowe, przeglądy oraz numery części tego pojazdu zostaną usunięte.';
             const btn = document.getElementById('confirm-action-btn');
             btn.onclick = async () => {
                 const carIdToDelete = car.id;
+                allCachedCars = allCachedCars.filter(c => c.id !== carIdToDelete);
                 cars = cars.filter(c => c.id !== carIdToDelete);
                 selectedCarId = null;
-                await saveCarsCacheToIDB(cars);
+
+                await saveCarsCacheToIDB(allCachedCars);
                 renderAll();
 
-                if (currentUser && db) {
+                if (db) {
                     try {
-                        const carDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'cars', carIdToDelete);
+                        const carDocRef = doc(db, 'cars', carIdToDelete);
                         await deleteDoc(carDocRef);
                     } catch (err) {
                         console.error('Błąd usuwania pojazdu z Firestore:', err);
@@ -2952,16 +3914,13 @@
             const car = cars.find(c => c.id === selectedCarId);
             if (!car) return;
 
-            document.getElementById('confirm-title').textContent = 'Usunąć ten wpis serwisowy?';
-            document.getElementById('confirm-desc').textContent = 'Wpis zostanie trwale usunięty z historii tego samochodu.';
+            document.getElementById('confirm-title').textContent = 'Usunąć ten wpis?';
+            document.getElementById('confirm-desc').textContent = 'Wpis zostanie trwale usunięty ze wspólnej historii tego samochodu.';
             const btn = document.getElementById('confirm-action-btn');
             btn.onclick = async () => {
                 const updatedRecords = (car.records || []).filter(r => r.id !== recordId);
                 const updatedCar = { ...car, records: updatedRecords, updatedAt: Date.now() };
-                if (!currentUser || !db) {
-                    const idx = cars.findIndex(c => c.id === car.id);
-                    if (idx >= 0) cars[idx] = updatedCar;
-                }
+
                 await persistCarToFirestore(updatedCar);
                 closeConfirmModal();
                 showToast('Wpis został usunięty');
@@ -2973,7 +3932,6 @@
             document.getElementById('confirm-modal').classList.add('hidden');
         };
 
-        // Zabezpieczenie przed XSS przy generowaniu HTML
         function escapeHtml(str) {
             if (!str) return '';
             return String(str)
@@ -2984,10 +3942,18 @@
                 .replace(/'/g, '&#039;');
         }
 
-        // Start aplikacji po załadowaniu okna
-        window.onload = function() {
+        // Start aplikacji natychmiast lub po załadowaniu DOM
+        function startApp() {
+            initAuth();
             initFirebase();
-        };
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startApp);
+        } else {
+            startApp();
+        }
     </script>
 </body>
 </html>
+

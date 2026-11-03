@@ -124,6 +124,20 @@
                 background: #f8fafc !important;
                 color: #0f172a !important;
             }
+
+            /* Specjalny tryb wydruku protokołu serwisowego */
+            body.protocol-print-active > *:not(#printable-protocol-wrapper) {
+                display: none !important;
+            }
+            body.protocol-print-active #printable-protocol-wrapper {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
         }
         .print-only {
             display: none;
@@ -184,11 +198,17 @@
                     <span class="hidden sm:inline">Wyloguj</span>
                 </button>
 
-                <!-- Przycisk statusu połączenia z chmurą -->
-                <button onclick="openConnectionModal()" id="sync-status" class="hidden sm:flex items-center space-x-2 text-xs bg-slate-800/90 hover:bg-slate-700 border border-slate-700 hover:border-blue-500/50 px-3 py-2 rounded-xl text-slate-200 transition shadow-sm cursor-pointer" title="Zarządzaj połączeniem i kopiami zapasowymi">
+                <!-- Dyskretny wskaźnik statusu połączenia z chmurą Firebase -->
+                <button onclick="openConnectionModal()" id="sync-status" class="flex items-center space-x-1.5 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/70 px-2.5 py-2 rounded-xl text-slate-300 transition shadow-sm cursor-pointer" title="Status bazy chmurowej Firebase (kliknij, aby zarządzać)">
                     <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="sync-dot"></span>
-                    <span id="sync-text" class="font-medium">Łączenie...</span>
-                    <i class="fa-solid fa-cloud text-[10px] text-slate-400 ml-1"></i>
+                    <span id="sync-text" class="font-medium hidden xl:inline text-[11px]">Łączenie...</span>
+                    <i class="fa-solid fa-cloud text-xs text-slate-400"></i>
+                </button>
+
+                <!-- Przycisk: Wygeneruj protokół dla pojazdu spoza bazy (z bezpośrednią wysyłką e-mail) -->
+                <button onclick="openExternalProtocolModal()" id="btn-external-protocol" class="px-2.5 sm:px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 border border-emerald-500/40 cursor-pointer" title="Wygeneruj protokół serwisowy dla pojazdu spoza bazy i wyślij e-mailem">
+                    <i class="fa-solid fa-file-invoice text-amber-300"></i>
+                    <span class="hidden sm:inline">Protokół (spoza bazy)</span>
                 </button>
 
                 <!-- Przycisk dodawania nowego auta -->
@@ -1046,12 +1066,28 @@
                     </div>
                 </div>
 
-                <!-- Użyte części / zamontowane zamienniki -->
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                        <i class="fa-solid fa-boxes-stacked mr-1 text-blue-400"></i> Użyte części / zamontowane zamienniki (producent, olej, klocki itp.)
-                    </label>
-                    <textarea id="input-record-parts" rows="3" placeholder="np. Olej Castrol Edge 5W30 LL 5.2L, filtr oleju Mann, klocki przód Brembo..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
+                <!-- Użyte części / zamontowane zamienniki w liniach dynamicznych -->
+                <div class="pt-3 border-t border-slate-800">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-boxes-stacked"></i> Użyte części i materiały (pozycje)
+                        </label>
+                        <button type="button" onclick="addRecordPartRow()" class="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold transition flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-plus text-[10px]"></i> Dodaj część
+                        </button>
+                    </div>
+
+                    <!-- Lista dynamicznych pozycji części -->
+                    <div id="record-parts-container" class="space-y-2 mb-2 max-h-48 overflow-y-auto pr-1">
+                        <!-- Wiersze części dodawane dynamicznie przez JS -->
+                    </div>
+
+                    <div class="flex items-center justify-between bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs">
+                        <span class="text-slate-400">Suma części: <strong id="record-parts-sum-display" class="text-emerald-400 font-mono font-bold">0.00 PLN</strong></span>
+                        <button type="button" onclick="copyPartsSumToTotalCost()" class="text-[11px] text-blue-400 hover:text-blue-300 font-medium hover:underline cursor-pointer">
+                            Przepisz do kosztu całkowitego &rarr;
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -1215,6 +1251,225 @@
                 </div>
             </form>
         </div>
+    </div>
+
+    <!-- MODAL: PROTOKÓŁ SERWISOWY Z ISTNIEJĄCEGO WPISU W BAZIE -->
+    <div id="record-protocol-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+        <div class="bg-garage-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl my-6 flex flex-col max-h-[92vh]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                        <i class="fa-solid fa-file-invoice text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-white leading-tight">Protokół Wykonania Usługi</h3>
+                        <p class="text-xs text-slate-400">Podgląd zlecenia, wydruk oraz bezpośrednia wysyłka e-mailem</p>
+                    </div>
+                </div>
+                <button onclick="closeRecordProtocolModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Podgląd treści protokołu -->
+            <div id="record-protocol-content" class="flex-1 overflow-y-auto py-4 space-y-4 pr-1 text-xs">
+                <!-- Generowane przez JS -->
+            </div>
+
+            <!-- Sekcja akcji: Wysyłka e-mail oraz Wydruk -->
+            <div class="pt-4 border-t border-slate-800 space-y-3">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input type="email" id="rec-proto-client-email" placeholder="E-mail klienta (np. klient@gmail.com)" class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <button type="button" onclick="sendCurrentRecordProtocolEmail()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-900/30 shrink-0 cursor-pointer">
+                        <i class="fa-solid fa-paper-plane text-amber-300"></i> Wyślij e-mailem
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <button type="button" onclick="closeRecordProtocolModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer">
+                        Zamknij
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="printCurrentRecordProtocol()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-print"></i> Drukuj / PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: WYGENERUJ PROTOKÓŁ DLA POJAZDU SPOZA BAZY (Z WYSYŁKĄ EMAIL) -->
+    <div id="external-protocol-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+        <div class="bg-garage-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl my-6 flex flex-col max-h-[92vh]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-md">
+                        <i class="fa-solid fa-file-signature text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-white leading-tight">Protokół dla Pojazdu Spoza Bazy</h3>
+                        <p class="text-xs text-emerald-400">Wystawienie protokołu z natychmiastowym przekierowaniem do e-maila</p>
+                    </div>
+                </div>
+                <button onclick="closeExternalProtocolModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="external-protocol-form" onsubmit="handleExternalProtocolSubmit(event)" class="flex-1 overflow-y-auto py-4 space-y-4 pr-1 text-xs">
+                
+                <!-- DANE KLIENTA -->
+                <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-check"></i> 1. Dane Klienta / Zleceniodawcy
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Imię i Nazwisko / Firma *</label>
+                            <input type="text" id="ext-client-name" required placeholder="np. Jan Kowalski / Firma ABC" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Adres E-mail (do wysyłki) *</label>
+                            <input type="email" id="ext-client-email" required placeholder="klient@poczta.pl" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Numer Telefonu</label>
+                            <input type="tel" id="ext-client-phone" placeholder="np. +48 600 000 000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DANE POJAZDU -->
+                <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-car"></i> 2. Dane Pojazdu
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Marka i Model *</label>
+                            <input type="text" id="ext-car-title" required placeholder="np. Audi A4 B8 2.0 TDI" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Nr Rejestracyjny *</label>
+                            <input type="text" id="ext-car-plate" required placeholder="np. KR 12345" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono uppercase text-amber-300 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Przebieg (km) *</label>
+                            <input type="text" id="ext-car-mileage" required placeholder="np. 215000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-amber-400 focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Numer VIN (opcjonalnie)</label>
+                            <input type="text" id="ext-car-vin" placeholder="np. WAUZZZ8K..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono uppercase text-slate-300 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Rok produkcji</label>
+                            <input type="number" id="ext-car-year" placeholder="np. 2012" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DANE ZLECENIA / NAPRAWY -->
+                <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-screwdriver-wrench"></i> 3. Zakres Zlecenia i Wykonane Czynności
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div class="sm:col-span-2">
+                            <label class="block text-[11px] text-slate-400 mb-1">Tytuł usługi / naprawy *</label>
+                            <input type="text" id="ext-service-title" required placeholder="np. Serwis olejowo-filtrowy + klocki hamulcowe przód" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Data usługi *</label>
+                            <input type="text" id="ext-service-date" required placeholder="np. 03.11.2026" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UŻYTE CZĘŚCI I MATERIAŁY (DYNAMICZNE LINIE) -->
+                <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-boxes-stacked"></i> 4. Użyte Części i Materiały
+                        </div>
+                        <button type="button" onclick="addExtPartRow()" class="px-2.5 py-1 rounded-lg bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/30 text-xs font-semibold transition flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-plus text-[10px]"></i> Dodaj część
+                        </button>
+                    </div>
+
+                    <!-- Dynamiczne linie części dla protokołu zewnętrznego -->
+                    <div id="ext-parts-container" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <!-- Wiersze generowane dynamicznie -->
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs text-slate-400 pt-1">
+                        <span>Suma części: <strong id="ext-parts-sum-display" class="text-emerald-400 font-mono font-bold">0.00 PLN</strong></span>
+                        <span class="text-[11px] text-slate-500">Dodawaj dowolną liczbę pozycji</span>
+                    </div>
+                </div>
+
+                <!-- KOSZTY I ROZLICZENIE -->
+                <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-coins"></i> 5. Rozliczenie Finansowe
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Koszt robocizny / usługi (PLN)</label>
+                            <input type="number" step="0.01" id="ext-labor-cost" oninput="calculateExtTotalCost()" placeholder="np. 250.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-purple-300 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Łączny koszt do zapłaty (PLN) *</label>
+                            <input type="number" step="0.01" id="ext-total-cost" required placeholder="np. 650.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-400 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OPIS / ZALECENIA SERWISOWE -->
+                <div>
+                    <label class="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
+                        <i class="fa-solid fa-circle-info text-blue-400 mr-1"></i> Zalecenia dla klienta / uwagi serwisowe
+                    </label>
+                    <textarea id="ext-service-desc" rows="2" placeholder="np. Następna wymiana oleju za 15 000 km lub za 1 rok. Tarcze hamulcowe tył kwalifikują się do wymiany przy następnym przeglądzie." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <!-- OPCJA: ZAPIS DO GARAŻU -->
+                <div class="pt-2">
+                    <label class="cursor-pointer bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center space-x-3 transition">
+                        <input type="checkbox" id="ext-save-to-garage" class="w-4 h-4 rounded accent-emerald-500 bg-slate-900 border-slate-700">
+                        <div>
+                            <div class="text-xs font-bold text-slate-200">Dodaj ten pojazd i naprawę na stałe do mojego garażu</div>
+                            <div class="text-[11px] text-slate-400">Pojazd pojawi się na Twojej liście aut z tą historią serwisową</div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- PRZYCISKI AKCJI -->
+                <div class="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                    <button type="button" onclick="closeExternalProtocolModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer">
+                        Anuluj
+                    </button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="printExternalProtocol()" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow cursor-pointer">
+                            <i class="fa-solid fa-print"></i> Drukuj / PDF
+                        </button>
+                        <button type="submit" class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/50 cursor-pointer">
+                            <i class="fa-solid fa-paper-plane text-amber-300"></i> Wyślij protokół e-mailem &rarr;
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- KONTENER WYDRUKU PROTOKOŁU (WIDOCZNY TYLKO W TRYBIE DRUKU / PDF PROTOKOŁU) -->
+    <div id="printable-protocol-wrapper" class="hidden">
+        <!-- Generowany dynamicznie szablon wydruku A4 -->
     </div>
 
     <!-- MODAL POTWIEDZENIA AKCJI / USUNIĘCIA -->
@@ -3420,6 +3675,9 @@
                                 </div>
                                 ${costHtml}
                                 <div class="flex items-center space-x-1 no-print">
+                                    <button onclick="openRecordProtocolModal('${rec.id}')" class="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition text-xs" title="Wygeneruj protokół / Drukuj / Wyślij e-mailem">
+                                        <i class="fa-solid fa-file-invoice text-emerald-400"></i>
+                                    </button>
                                     <button onclick="openRecordModal('${rec.id}')" class="p-1.5 text-slate-400 hover:text-blue-400 rounded-lg hover:bg-slate-800 transition text-xs" title="Edytuj wpis">
                                         <i class="fa-solid fa-pen"></i>
                                     </button>
@@ -3432,12 +3690,27 @@
 
                         <div class="pt-2.5 space-y-2 text-xs">
                             ${replacedFiltersHtml}
-                            ${rec.partsUsed ? `
+                            ${(rec.partsItems && Array.isArray(rec.partsItems) && rec.partsItems.length > 0) ? `
+                                <div class="bg-slate-900/70 border border-slate-800/80 rounded-lg p-2.5 text-slate-300 print-text-dark print-badge">
+                                    <div class="text-[10px] uppercase tracking-wider text-slate-400 print-text-muted font-semibold mb-1.5 flex items-center justify-between">
+                                        <span><i class="fa-solid fa-boxes-stacked text-blue-400 mr-1 no-print"></i>Użyte części i materiały (${rec.partsItems.length}):</span>
+                                        <span class="text-emerald-400 font-mono font-bold">${rec.partsItems.reduce((acc, p) => acc + (parseFloat(p.price) || 0), 0).toFixed(2)} PLN</span>
+                                    </div>
+                                    <div class="space-y-1">
+                                        ${rec.partsItems.map(p => `
+                                            <div class="flex items-center justify-between font-mono text-xs text-slate-200 border-b border-slate-800/40 pb-0.5 last:border-b-0">
+                                                <span>${escapeHtml(p.name)} <span class="text-[10px] text-slate-400 font-normal">(${escapeHtml(p.qty || '1 szt')})</span></span>
+                                                <span class="text-emerald-400 font-semibold">${parseFloat(p.price) > 0 ? parseFloat(p.price).toFixed(2) + ' PLN' : '-'}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : (rec.partsUsed ? `
                                 <div class="bg-slate-900/70 border border-slate-800/80 rounded-lg p-2.5 text-slate-300 print-text-dark print-badge">
                                     <div class="text-[10px] uppercase tracking-wider text-slate-400 print-text-muted font-semibold mb-1"><i class="fa-solid fa-boxes-stacked text-blue-400 mr-1 no-print"></i>Użyte części / zamontowane zamienniki:</div>
                                     <div class="font-mono text-xs text-slate-200 print-text-dark whitespace-pre-line leading-relaxed">${escapeHtml(rec.partsUsed)}</div>
                                 </div>
-                            ` : ''}
+                            ` : '')}
                             ${rec.description ? `
                                 <p class="text-slate-400 print-text-muted leading-relaxed whitespace-pre-line">${escapeHtml(rec.description)}</p>
                             ` : ''}
@@ -3749,6 +4022,58 @@
             }
         };
 
+        // ============================================================================
+        // DYNAMICZNE WIERSZE CZĘŚCI I MATERIAŁÓW (FORMULARZ WPISU W BAZIE)
+        // ============================================================================
+        window.addRecordPartRow = function(name = '', qty = '1 szt', price = '') {
+            const container = document.getElementById('record-parts-container');
+            if (!container) return;
+
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl p-2 part-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Nazwa części (np. Olej Castrol 5W30)" class="part-name flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500" value="${escapeHtml(name)}">
+                <input type="text" placeholder="Ilość" class="part-qty w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-center text-slate-300 focus:outline-none focus:border-blue-500" value="${escapeHtml(qty)}">
+                <input type="number" step="0.01" placeholder="Cena" class="part-price w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-right text-emerald-400 focus:outline-none focus:border-blue-500" value="${price !== '' ? parseFloat(price) : ''}" oninput="calculateRecordPartsSum()">
+                <button type="button" onclick="removeRecordPartRow(this)" class="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-800 transition text-xs shrink-0 cursor-pointer" title="Usuń pozycję">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+            container.appendChild(row);
+            calculateRecordPartsSum();
+        };
+
+        window.removeRecordPartRow = function(btn) {
+            const row = btn.closest('.part-row');
+            if (row) {
+                row.remove();
+                calculateRecordPartsSum();
+            }
+        };
+
+        window.calculateRecordPartsSum = function() {
+            const container = document.getElementById('record-parts-container');
+            if (!container) return 0;
+            const priceInputs = container.querySelectorAll('.part-price');
+            let sum = 0;
+            priceInputs.forEach(input => {
+                const val = parseFloat(input.value);
+                if (!isNaN(val) && val > 0) sum += val;
+            });
+            const display = document.getElementById('record-parts-sum-display');
+            if (display) display.textContent = `${sum.toFixed(2)} PLN`;
+            return sum;
+        };
+
+        window.copyPartsSumToTotalCost = function() {
+            const sum = calculateRecordPartsSum();
+            const costInput = document.getElementById('input-record-cost');
+            if (costInput && sum > 0) {
+                costInput.value = sum.toFixed(2);
+                showToast(`Ustawiono całkowity koszt: ${sum.toFixed(2)} PLN`);
+            }
+        };
+
         window.openRecordModal = function(recordId = null) {
             editingRecordId = recordId;
             const car = cars.find(c => c.id === selectedCarId);
@@ -3764,6 +4089,9 @@
             document.getElementById('chk-label-cabin').textContent = parts.cabinFilter ? `Nr por.: ${parts.cabinFilter}` : 'Brak nr w karcie';
             document.getElementById('chk-label-fuel').textContent = parts.fuelFilter ? `Nr por.: ${parts.fuelFilter}` : 'Brak nr w karcie';
 
+            const partsContainer = document.getElementById('record-parts-container');
+            if (partsContainer) partsContainer.innerHTML = '';
+
             if (recordId) {
                 const rec = (car.records || []).find(r => r.id === recordId);
                 if (!rec) return;
@@ -3774,8 +4102,23 @@
                 document.getElementById('input-record-date').value = rec.date || '';
                 document.getElementById('input-record-mileage').value = rec.mileage || '';
                 document.getElementById('input-record-cost').value = rec.cost || '';
-                document.getElementById('input-record-parts').value = rec.partsUsed || '';
                 document.getElementById('input-record-desc').value = rec.description || '';
+
+                if (rec.partsItems && Array.isArray(rec.partsItems) && rec.partsItems.length > 0) {
+                    rec.partsItems.forEach(item => {
+                        addRecordPartRow(item.name || '', item.qty || '1 szt', item.price || '');
+                    });
+                } else if (rec.partsUsed) {
+                    const lines = rec.partsUsed.split('\n').map(l => l.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean);
+                    if (lines.length > 0) {
+                        lines.forEach(line => addRecordPartRow(line, '1 kpl', ''));
+                    } else {
+                        addRecordPartRow('', '1 szt', '');
+                    }
+                } else {
+                    addRecordPartRow('', '1 szt', '');
+                }
+                calculateRecordPartsSum();
 
                 const fr = rec.filtersReplaced;
                 if (fr) {
@@ -3801,6 +4144,8 @@
                 toggleAllFilters(false);
                 document.getElementById('chk-filter-oil').checked = true;
                 prefillRecordTitle('OIL');
+                addRecordPartRow('', '1 szt', '');
+                calculateRecordPartsSum();
             }
 
             modal.classList.remove('hidden');
@@ -3822,8 +4167,20 @@
             const rawMileage = document.getElementById('input-record-mileage').value.trim();
             const parsedMileage = parseMileageValue(rawMileage);
             const cost = parseFloat(document.getElementById('input-record-cost').value) || 0;
-            const partsUsed = document.getElementById('input-record-parts').value.trim();
             const description = document.getElementById('input-record-desc').value.trim();
+
+            // Pobranie dynamicznych pozycji części
+            const partRows = document.querySelectorAll('#record-parts-container .part-row');
+            const partsItems = [];
+            partRows.forEach(row => {
+                const name = row.querySelector('.part-name')?.value.trim();
+                const qty = row.querySelector('.part-qty')?.value.trim() || '1 szt';
+                const price = parseFloat(row.querySelector('.part-price')?.value) || 0;
+                if (name) {
+                    partsItems.push({ name, qty, price });
+                }
+            });
+            const partsUsed = partsItems.map(p => `• ${p.name} (${p.qty})${p.price > 0 ? ' - ' + p.price.toFixed(2) + ' PLN' : ''}`).join('\n');
 
             const filtersReplaced = {
                 oil: document.getElementById('chk-filter-oil').checked,
@@ -3846,6 +4203,7 @@
                         rawMileageLabel: rawMileage,
                         cost,
                         filtersReplaced,
+                        partsItems,
                         partsUsed,
                         description
                     };
@@ -3860,6 +4218,7 @@
                     rawMileageLabel: rawMileage,
                     cost,
                     filtersReplaced,
+                    partsItems,
                     partsUsed,
                     description,
                     createdAt: Date.now()
@@ -3879,6 +4238,640 @@
             closeRecordModal();
             showToast(editingRecordId ? 'Zaktualizowano wpis' : 'Dodano nowy wpis do wspólnej osi czasu');
         };
+
+        // ============================================================================
+        // PROTOKÓŁ SERWISOWY Z ISTNIEJĄCEGO WPISU (PODGLĄD / DRUK / EMAIL)
+        // ============================================================================
+        let activeProtocolRecord = null;
+
+        window.openRecordProtocolModal = function(recordId) {
+            const car = cars.find(c => c.id === selectedCarId);
+            if (!car) return;
+            const rec = (car.records || []).find(r => r.id === recordId);
+            if (!rec) return;
+
+            activeProtocolRecord = { car, record: rec };
+
+            const contentEl = document.getElementById('record-protocol-content');
+            if (!contentEl) return;
+
+            const carParts = car.parts || {};
+            const replacedFilters = getReplacedFiltersForRecord(rec, carParts);
+            const partsList = (rec.partsItems && Array.isArray(rec.partsItems) && rec.partsItems.length > 0) ? rec.partsItems : [];
+            const partsTotal = partsList.reduce((acc, p) => acc + (parseFloat(p.price) || 0), 0);
+            const totalCost = parseFloat(rec.cost) || partsTotal;
+            const laborCost = Math.max(0, totalCost - partsTotal);
+
+            const protoDate = rec.date || new Date().toLocaleDateString('pl-PL');
+            const protoNum = `PROTO/${protoDate.replace(/\./g, '')}-${rec.id.slice(-4).toUpperCase()}`;
+
+            contentEl.innerHTML = `
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 text-slate-200">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-2">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">AutoLog Serwis</span>
+                            <h4 class="text-base font-bold text-white">Protokół Wykonania Usługi</h4>
+                            <span class="text-[11px] font-mono text-slate-400">Nr: ${protoNum}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[11px] font-mono bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-slate-300">
+                                <i class="fa-regular fa-calendar mr-1 text-blue-400"></i>Data: ${escapeHtml(protoDate)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Dane pojazdu -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900/80 p-3 rounded-xl border border-slate-800/80 text-xs font-mono">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block uppercase">Pojazd:</span>
+                            <strong class="text-white text-xs">${escapeHtml(car.title)}</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block uppercase">Nr rejestracyjny:</span>
+                            <strong class="text-amber-400">${escapeHtml(car.plate || '-')}</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block uppercase">VIN:</span>
+                            <span class="text-slate-300 text-[11px] truncate block" title="${escapeHtml(car.vin || '')}">${escapeHtml(car.vin || '-')}</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block uppercase">Przebieg podczas usługi:</span>
+                            <strong class="text-emerald-400">${rec.mileage ? rec.mileage.toLocaleString('pl-PL') + ' km' : '-'}</strong>
+                        </div>
+                    </div>
+
+                    <!-- Czynność główna -->
+                    <div>
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Czynność główna / Zlecenie:</div>
+                        <div class="text-sm font-bold text-white bg-slate-900 px-3 py-2 rounded-xl border border-slate-800">
+                            ${escapeHtml(rec.title)}
+                        </div>
+                    </div>
+
+                    <!-- Wymienione filtry -->
+                    ${replacedFilters.length > 0 ? `
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5">Wymienione filtry:</div>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${replacedFilters.map(f => `
+                                    <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-xs flex items-center gap-1.5">
+                                        <i class="fa-solid fa-check text-emerald-400 text-[10px]"></i>
+                                        <span>${escapeHtml(f.label)}</span>
+                                        ${f.code ? `<span class="text-[10px] font-mono text-slate-400">(${escapeHtml(f.code)})</span>` : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Tabela części -->
+                    <div>
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1.5 flex justify-between">
+                            <span>Wyszczególnienie użytych części i materiałów:</span>
+                            ${partsTotal > 0 ? `<span class="text-emerald-400 font-mono">Suma: ${partsTotal.toFixed(2)} PLN</span>` : ''}
+                        </div>
+                        ${partsList.length > 0 ? `
+                            <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/50">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-900 text-slate-400 text-[10px] uppercase">
+                                        <tr>
+                                            <th class="py-2 px-3">Lp.</th>
+                                            <th class="py-2 px-3">Pozycja / Część</th>
+                                            <th class="py-2 px-3 text-center">Ilość</th>
+                                            <th class="py-2 px-3 text-right">Cena</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800/80 font-mono">
+                                        ${partsList.map((p, idx) => `
+                                            <tr>
+                                                <td class="py-1.5 px-3 text-slate-500">${idx + 1}.</td>
+                                                <td class="py-1.5 px-3 text-white font-sans">${escapeHtml(p.name)}</td>
+                                                <td class="py-1.5 px-3 text-center text-slate-300">${escapeHtml(p.qty || '1 szt')}</td>
+                                                <td class="py-1.5 px-3 text-right text-emerald-400">${parseFloat(p.price) > 0 ? parseFloat(p.price).toFixed(2) + ' PLN' : '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : (rec.partsUsed ? `
+                            <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 font-mono text-xs whitespace-pre-line text-slate-300">
+                                ${escapeHtml(rec.partsUsed)}
+                            </div>
+                        ` : '<div class="text-slate-500 italic p-2 bg-slate-900 rounded-xl">Brak wyszczególnionych części</div>')}
+                    </div>
+
+                    <!-- Opis i zalecenia -->
+                    ${rec.description ? `
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Uwagi i zalecenia serwisowe:</div>
+                            <div class="p-3 bg-slate-900/70 rounded-xl border border-slate-800 text-slate-300 leading-relaxed whitespace-pre-line">
+                                ${escapeHtml(rec.description)}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Podsumowanie finansowe -->
+                    <div class="pt-3 border-t border-slate-800 flex justify-end">
+                        <div class="w-64 space-y-1 text-right text-xs">
+                            ${partsTotal > 0 ? `
+                                <div class="flex justify-between text-slate-400">
+                                    <span>Części:</span>
+                                    <span class="font-mono text-slate-200">${partsTotal.toFixed(2)} PLN</span>
+                                </div>
+                            ` : ''}
+                            ${laborCost > 0 ? `
+                                <div class="flex justify-between text-slate-400">
+                                    <span>Usługa / Robocizna:</span>
+                                    <span class="font-mono text-slate-200">${laborCost.toFixed(2)} PLN</span>
+                                </div>
+                            ` : ''}
+                            <div class="flex justify-between text-sm font-bold text-white pt-1 border-t border-slate-800">
+                                <span>Razem do zapłaty:</span>
+                                <span class="font-mono text-emerald-400 text-base font-bold">${totalCost.toFixed(2)} PLN</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const emailInput = document.getElementById('rec-proto-client-email');
+            if (emailInput) {
+                emailInput.value = car.clientEmail || car.email || '';
+            }
+
+            document.getElementById('record-protocol-modal').classList.remove('hidden');
+        };
+
+        window.closeRecordProtocolModal = function() {
+            document.getElementById('record-protocol-modal').classList.add('hidden');
+            activeProtocolRecord = null;
+        };
+
+        window.sendCurrentRecordProtocolEmail = function() {
+            if (!activeProtocolRecord) return;
+            const { car, record: rec } = activeProtocolRecord;
+            const emailInput = document.getElementById('rec-proto-client-email');
+            const clientEmail = emailInput ? emailInput.value.trim() : '';
+            if (!clientEmail) {
+                showToast('Wpisz adres e-mail klienta, aby wysłać protokół!', 'warning');
+                if (emailInput) emailInput.focus();
+                return;
+            }
+
+            const subject = `Protokół serwisowy - ${car.title} [${car.plate || ''}]`;
+
+            let partsText = '';
+            if (rec.partsItems && Array.isArray(rec.partsItems) && rec.partsItems.length > 0) {
+                partsText = rec.partsItems.map((p, i) => `${i + 1}. ${p.name} (${p.qty || '1 szt'})${parseFloat(p.price) > 0 ? ' - ' + parseFloat(p.price).toFixed(2) + ' PLN' : ''}`).join('\n');
+            } else if (rec.partsUsed) {
+                partsText = rec.partsUsed;
+            } else {
+                partsText = 'Brak wyszczególnionych pozycji części.';
+            }
+
+            const body = 
+`Dzień dobry,
+
+Poniżej przesyłamy protokół z wykonanych czynności serwisowych:
+
+==================================================
+DANE POJAZDU:
+Pojazd: ${car.title}
+Nr rejestracyjny: ${car.plate || '-'}
+Nr VIN: ${car.vin || '-'}
+Przebieg podczas usługi: ${rec.mileage ? rec.mileage.toLocaleString('pl-PL') + ' km' : '-'}
+Data wykonania: ${rec.date || '-'}
+
+==================================================
+ZAKRES WYKONANYCH PRAC:
+${rec.title}
+
+==================================================
+UŻYTE CZĘŚCI I MATERIAŁY:
+${partsText}
+
+==================================================
+ROZLICZENIE FINANSOWE:
+Całkowity koszt usługi: ${parseFloat(rec.cost || 0).toFixed(2)} PLN
+
+==================================================
+ZALECENIA SERWISOWE I UWAGI:
+${rec.description || 'Brak dodatkowych uwag.'}
+
+==================================================
+Z poważaniem,
+Serwis AutoLog
+`;
+
+            const mailtoUrl = `mailto:${encodeURIComponent(clientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoUrl;
+            showToast('Przekierowano do programu pocztowego!');
+        };
+
+        window.printCurrentRecordProtocol = function() {
+            if (!activeProtocolRecord) return;
+            const { car, record: rec } = activeProtocolRecord;
+
+            generatePrintableProtocol({
+                clientName: 'Właściciel pojazdu',
+                clientEmail: document.getElementById('rec-proto-client-email')?.value.trim() || '',
+                clientPhone: '',
+                carTitle: car.title,
+                carPlate: car.plate,
+                carVin: car.vin,
+                carYear: car.year,
+                mileage: rec.mileage,
+                serviceTitle: rec.title,
+                serviceDate: rec.date,
+                partsItems: rec.partsItems || [],
+                partsUsedText: rec.partsUsed,
+                laborCost: 0,
+                totalCost: parseFloat(rec.cost) || 0,
+                description: rec.description
+            });
+
+            window.print();
+        };
+
+        // ============================================================================
+        // PROTOKÓŁ DLA POJAZDU SPOZA BAZY (Z PRZEKIEROWANIEM DO WYSYŁKI E-MAIL)
+        // ============================================================================
+        window.openExternalProtocolModal = function() {
+            const modal = document.getElementById('external-protocol-modal');
+            const form = document.getElementById('external-protocol-form');
+            if (!modal || !form) return;
+
+            form.reset();
+
+            // Ustaw domyślną datę
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+            const dateInput = document.getElementById('ext-service-date');
+            if (dateInput) dateInput.value = `${d}.${m}.${y}`;
+
+            // Wyczyść i przygotuj listę części
+            const container = document.getElementById('ext-parts-container');
+            if (container) container.innerHTML = '';
+            addExtPartRow('', '1 szt', '');
+
+            calculateExtTotalCost();
+            modal.classList.remove('hidden');
+        };
+
+        window.closeExternalProtocolModal = function() {
+            const modal = document.getElementById('external-protocol-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.addExtPartRow = function(name = '', qty = '1 szt', price = '') {
+            const container = document.getElementById('ext-parts-container');
+            if (!container) return;
+
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl p-2 ext-part-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Nazwa części (np. Tarcze hamulcowe ATE)" class="ext-part-name flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500" value="${escapeHtml(name)}">
+                <input type="text" placeholder="Ilość" class="ext-part-qty w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-center text-slate-300 focus:outline-none focus:border-teal-500" value="${escapeHtml(qty)}">
+                <input type="number" step="0.01" placeholder="Cena (PLN)" class="ext-part-price w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-right text-emerald-400 focus:outline-none focus:border-teal-500" value="${price !== '' ? parseFloat(price) : ''}" oninput="calculateExtTotalCost()">
+                <button type="button" onclick="removeExtPartRow(this)" class="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-800 transition text-xs shrink-0 cursor-pointer" title="Usuń pozycję">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+            container.appendChild(row);
+            calculateExtTotalCost();
+        };
+
+        window.removeExtPartRow = function(btn) {
+            const row = btn.closest('.ext-part-row');
+            if (row) {
+                row.remove();
+                calculateExtTotalCost();
+            }
+        };
+
+        window.calculateExtTotalCost = function() {
+            const container = document.getElementById('ext-parts-container');
+            let partsSum = 0;
+            if (container) {
+                container.querySelectorAll('.ext-part-price').forEach(input => {
+                    const val = parseFloat(input.value);
+                    if (!isNaN(val) && val > 0) partsSum += val;
+                });
+            }
+            const display = document.getElementById('ext-parts-sum-display');
+            if (display) display.textContent = `${partsSum.toFixed(2)} PLN`;
+
+            const laborInput = document.getElementById('ext-labor-cost');
+            const labor = laborInput ? (parseFloat(laborInput.value) || 0) : 0;
+
+            const totalInput = document.getElementById('ext-total-cost');
+            if (totalInput) {
+                totalInput.value = (partsSum + labor).toFixed(2);
+            }
+            return { partsSum, labor, total: partsSum + labor };
+        };
+
+        window.handleExternalProtocolSubmit = async function(e) {
+            e.preventDefault();
+
+            const clientName = document.getElementById('ext-client-name').value.trim();
+            const clientEmail = document.getElementById('ext-client-email').value.trim();
+            const clientPhone = document.getElementById('ext-client-phone').value.trim();
+
+            const carTitle = document.getElementById('ext-car-title').value.trim();
+            const carPlate = document.getElementById('ext-car-plate').value.trim().toUpperCase();
+            const carVin = document.getElementById('ext-car-vin').value.trim().toUpperCase();
+            const carYear = document.getElementById('ext-car-year').value.trim();
+            const carMileage = document.getElementById('ext-car-mileage').value.trim();
+
+            const serviceTitle = document.getElementById('ext-service-title').value.trim();
+            const serviceDate = document.getElementById('ext-service-date').value.trim();
+
+            const partRows = document.querySelectorAll('#ext-parts-container .ext-part-row');
+            const partsItems = [];
+            partRows.forEach(row => {
+                const name = row.querySelector('.ext-part-name')?.value.trim();
+                const qty = row.querySelector('.ext-part-qty')?.value.trim() || '1 szt';
+                const price = parseFloat(row.querySelector('.ext-part-price')?.value) || 0;
+                if (name) partsItems.push({ name, qty, price });
+            });
+
+            const laborCost = parseFloat(document.getElementById('ext-labor-cost').value) || 0;
+            const totalCost = parseFloat(document.getElementById('ext-total-cost').value) || 0;
+            const description = document.getElementById('ext-service-desc').value.trim();
+            const saveToGarage = document.getElementById('ext-save-to-garage').checked;
+
+            if (saveToGarage) {
+                const parsedKm = parseMileageValue(carMileage);
+                const newCarId = 'car-' + Date.now();
+                const newRecord = {
+                    id: 'rec-' + Date.now(),
+                    type: 'REPAIR',
+                    title: serviceTitle,
+                    date: serviceDate,
+                    mileage: parsedKm,
+                    rawMileageLabel: carMileage,
+                    cost: totalCost,
+                    partsItems,
+                    partsUsed: partsItems.map(p => `• ${p.name} (${p.qty})${p.price > 0 ? ' - ' + p.price.toFixed(2) + ' PLN' : ''}`).join('\n'),
+                    description: description,
+                    filtersReplaced: { oil: false, air: false, cabin: false, fuel: false },
+                    createdAt: Date.now()
+                };
+
+                const newCar = {
+                    id: newCarId,
+                    userId: currentUserId,
+                    name: carTitle,
+                    title: carTitle,
+                    plate: carPlate,
+                    vin: carVin,
+                    year: carYear,
+                    engine: '',
+                    power: '',
+                    mileage: parsedKm,
+                    owner: clientName,
+                    phone: clientPhone,
+                    email: clientEmail,
+                    orderIndex: cars.length,
+                    records: [newRecord],
+                    todos: [],
+                    parts: {},
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+
+                cars.push(newCar);
+                selectedCarId = newCarId;
+                await persistCarToFirestore(newCar);
+                renderApp();
+            }
+
+            const subject = `Protokół serwisowy - ${carTitle} [${carPlate}]`;
+
+            let partsText = '';
+            if (partsItems.length > 0) {
+                partsText = partsItems.map((p, i) => `${i + 1}. ${p.name} (${p.qty})${p.price > 0 ? ' - ' + p.price.toFixed(2) + ' PLN' : ''}`).join('\n');
+            } else {
+                partsText = 'Brak wyszczególnionych pozycji części.';
+            }
+
+            const body = 
+`Szanowny Kliencie (${clientName}),
+
+Poniżej przesyłamy protokół z wykonanych prac serwisowych dla Twojego pojazdu:
+
+==================================================
+DANE POJAZDU:
+Pojazd: ${carTitle}
+Nr rejestracyjny: ${carPlate}
+${carVin ? 'Nr VIN: ' + carVin + '\n' : ''}${carYear ? 'Rok produkcji: ' + carYear + '\n' : ''}Przebieg podczas usługi: ${carMileage} km
+Data wykonania: ${serviceDate}
+
+==================================================
+ZAKRES WYKONANEJ USŁUGI:
+${serviceTitle}
+
+==================================================
+UŻYTE CZĘŚCI I MATERIAŁY:
+${partsText}
+
+==================================================
+PODSUMOWANIE FINANSOWE:
+- Części i materiały: ${partsItems.reduce((acc, p) => acc + (parseFloat(p.price) || 0), 0).toFixed(2)} PLN
+- Robocizna / usługa: ${laborCost.toFixed(2)} PLN
+--------------------------------------------------
+ŁĄCZNIE DO ZAPŁATY: ${totalCost.toFixed(2)} PLN
+
+==================================================
+ZALECENIA SERWISOWE I UWAGI:
+${description || 'Brak dodatkowych uwag.'}
+
+==================================================
+Dziękujemy za skorzystanie z naszych usług!
+AutoLog Serwis
+`;
+
+            const mailtoUrl = `mailto:${encodeURIComponent(clientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            closeExternalProtocolModal();
+            showToast('Przekierowano do wysyłki e-mailem!');
+            window.location.href = mailtoUrl;
+        };
+
+        window.printExternalProtocol = function() {
+            const carTitle = document.getElementById('ext-car-title').value.trim();
+            const serviceTitle = document.getElementById('ext-service-title').value.trim();
+            if (!carTitle || !serviceTitle) {
+                showToast('Wypełnij przynajmniej pojazd oraz tytuł usługi przed wydrukiem!', 'warning');
+                return;
+            }
+
+            const partRows = document.querySelectorAll('#ext-parts-container .ext-part-row');
+            const partsItems = [];
+            partRows.forEach(row => {
+                const name = row.querySelector('.ext-part-name')?.value.trim();
+                const qty = row.querySelector('.ext-part-qty')?.value.trim() || '1 szt';
+                const price = parseFloat(row.querySelector('.ext-part-price')?.value) || 0;
+                if (name) partsItems.push({ name, qty, price });
+            });
+
+            generatePrintableProtocol({
+                clientName: document.getElementById('ext-client-name').value.trim(),
+                clientEmail: document.getElementById('ext-client-email').value.trim(),
+                clientPhone: document.getElementById('ext-client-phone').value.trim(),
+                carTitle: carTitle,
+                carPlate: document.getElementById('ext-car-plate').value.trim().toUpperCase(),
+                carVin: document.getElementById('ext-car-vin').value.trim().toUpperCase(),
+                carYear: document.getElementById('ext-car-year').value.trim(),
+                mileage: document.getElementById('ext-car-mileage').value.trim(),
+                serviceTitle: serviceTitle,
+                serviceDate: document.getElementById('ext-service-date').value.trim(),
+                partsItems: partsItems,
+                laborCost: parseFloat(document.getElementById('ext-labor-cost').value) || 0,
+                totalCost: parseFloat(document.getElementById('ext-total-cost').value) || 0,
+                description: document.getElementById('ext-service-desc').value.trim()
+            });
+
+            window.print();
+        };
+
+        // Generator czystego szablonu wydruku A4 protokołu
+        function generatePrintableProtocol(data) {
+            const wrapper = document.getElementById('printable-protocol-wrapper');
+            if (!wrapper) return;
+
+            const partsTotal = (data.partsItems || []).reduce((acc, p) => acc + (parseFloat(p.price) || 0), 0);
+            const dateStr = data.serviceDate || new Date().toLocaleDateString('pl-PL');
+            const protoNum = `PROTO/${dateStr.replace(/\./g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+            wrapper.innerHTML = `
+                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; color: #000; background: #fff;">
+                    <!-- Nagłówek serwisu -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px;">
+                        <div>
+                            <h1 style="font-size: 20px; font-weight: bold; margin: 0 0 4px 0; text-transform: uppercase;">AutoLog Serwis Samochodowy</h1>
+                            <p style="font-size: 11px; margin: 0; color: #444;">Kompleksowa obsługa serwisowa pojazdów mechanicznych</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 14px; font-weight: bold;">PROTOKÓŁ SERWISOWY</div>
+                            <div style="font-size: 11px; color: #555;">Nr: ${protoNum}</div>
+                            <div style="font-size: 11px; color: #555;">Data wystawienia: ${dateStr}</div>
+                        </div>
+                    </div>
+
+                    <!-- Klient i Pojazd (2 kolumny) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                        <div style="border: 1px solid #ccc; border-radius: 6px; padding: 10px; font-size: 12px;">
+                            <div style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 3px;">Zleceniodawca / Klient:</div>
+                            <div><strong>${escapeHtml(data.clientName || 'Właściciel pojazdu')}</strong></div>
+                            ${data.clientPhone ? `<div style="font-size: 11px; color: #444;">Tel: ${escapeHtml(data.clientPhone)}</div>` : ''}
+                            ${data.clientEmail ? `<div style="font-size: 11px; color: #444;">E-mail: ${escapeHtml(data.clientEmail)}</div>` : ''}
+                        </div>
+                        <div style="border: 1px solid #ccc; border-radius: 6px; padding: 10px; font-size: 12px;">
+                            <div style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 3px;">Dane Pojazdu:</div>
+                            <div>Pojazd: <strong>${escapeHtml(data.carTitle)}</strong></div>
+                            <div>Nr rej.: <strong>${escapeHtml(data.carPlate || '-')}</strong> ${data.carYear ? `(${escapeHtml(data.carYear)})` : ''}</div>
+                            ${data.carVin ? `<div style="font-size: 11px; font-family: monospace;">VIN: ${escapeHtml(data.carVin)}</div>` : ''}
+                            <div>Przebieg: <strong>${data.mileage ? data.mileage.toLocaleString('pl-PL') + ' km' : '-'}</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Zakres prac -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-weight: bold; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 8px;">1. Zakres wykonanej usługi / naprawy:</div>
+                        <div style="font-size: 13px; font-weight: bold; padding: 8px 12px; background: #f4f4f4; border-radius: 4px;">
+                            ${escapeHtml(data.serviceTitle)}
+                        </div>
+                    </div>
+
+                    <!-- Tabela części -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-weight: bold; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 8px;">2. Wyszczególnienie użytych części i materiałów:</div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                            <thead>
+                                <tr style="background: #f4f4f4; border-bottom: 1px solid #bbb;">
+                                    <th style="padding: 6px; text-align: left; width: 35px;">Lp.</th>
+                                    <th style="padding: 6px; text-align: left;">Nazwa części / materiału</th>
+                                    <th style="padding: 6px; text-align: center; width: 80px;">Ilość</th>
+                                    <th style="padding: 6px; text-align: right; width: 100px;">Cena (PLN)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(data.partsItems && data.partsItems.length > 0) ? data.partsItems.map((p, i) => `
+                                    <tr style="border-bottom: 1px solid #eee;">
+                                        <td style="padding: 6px;">${i + 1}.</td>
+                                        <td style="padding: 6px;"><strong>${escapeHtml(p.name)}</strong></td>
+                                        <td style="padding: 6px; text-align: center;">${escapeHtml(p.qty || '1 szt')}</td>
+                                        <td style="padding: 6px; text-align: right;">${parseFloat(p.price) > 0 ? parseFloat(p.price).toFixed(2) + ' PLN' : '-'}</td>
+                                    </tr>
+                                `).join('') : `
+                                    <tr>
+                                        <td colspan="4" style="padding: 8px; text-align: center; color: #777; font-style: italic;">
+                                            ${data.partsUsedText ? escapeHtml(data.partsUsedText) : 'Brak dodatkowych pozycji części'}
+                                        </td>
+                                    </tr>
+                                `}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Zalecenia -->
+                    ${data.description ? `
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-weight: bold; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 6px;">3. Zalecenia i uwagi dla klienta:</div>
+                            <div style="font-size: 11px; color: #333; line-height: 1.5; padding: 6px 10px; background: #fafafa; border: 1px solid #eee; border-radius: 4px;">
+                                ${escapeHtml(data.description)}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Rozliczenie -->
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 35px;">
+                        <div style="width: 250px; font-size: 12px; line-height: 1.8;">
+                            ${partsTotal > 0 ? `
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Części i materiały:</span>
+                                    <span>${partsTotal.toFixed(2)} PLN</span>
+                                </div>
+                            ` : ''}
+                            ${data.laborCost > 0 ? `
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Robocizna / usługa:</span>
+                                    <span>${parseFloat(data.laborCost).toFixed(2)} PLN</span>
+                                </div>
+                            ` : ''}
+                            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; border-top: 2px solid #000; padding-top: 4px; margin-top: 4px;">
+                                <span>Razem do zapłaty:</span>
+                                <span>${parseFloat(data.totalCost).toFixed(2)} PLN</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Podpisy -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; padding-top: 20px; font-size: 11px; text-align: center;">
+                        <div>
+                            <div style="border-bottom: 1px dashed #777; height: 40px; margin-bottom: 6px;"></div>
+                            <div>Podpis osoby upoważnionej (serwis)</div>
+                        </div>
+                        <div>
+                            <div style="border-bottom: 1px dashed #777; height: 40px; margin-bottom: 6px;"></div>
+                            <div>Podpis klienta / odbierającego</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.classList.add('protocol-print-active');
+            window.onafterprint = function() {
+                document.body.classList.remove('protocol-print-active');
+            };
+            setTimeout(() => {
+                document.body.classList.remove('protocol-print-active');
+            }, 60000);
+        }
 
         window.confirmDeleteCar = function() {
             const car = cars.find(c => c.id === selectedCarId);
